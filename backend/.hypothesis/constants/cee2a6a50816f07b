@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/core/config.py
+# hypothesis_version: 6.148.6
+
+[30000, '.env', 'PopGraph', 'popgraph-images', 'utf-8']

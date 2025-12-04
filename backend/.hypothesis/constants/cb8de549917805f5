@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/clients/__init__.py
+# hypothesis_version: 6.148.5
+
+['DEFAULT_BASE_SIZE', 'ZImageTurboClient']

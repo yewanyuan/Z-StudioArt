@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/models/database.py
+# hypothesis_version: 6.148.5
+
+[100, 255, 500, 'CASCADE', 'GenerationRecord', 'User', 'generation_records', 'templates', 'user', 'users', 'users.id']

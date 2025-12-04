@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/services/content_filter.py
+# hypothesis_version: 6.148.5
+
+['#', 'drugs', 'fraud', 'gambling', 'porn', 'r', 'terrorism', 'utf-8', 'violence', '|', '传销', '恐怖', '政治敏感词1', '政治敏感词2', '暴力', '枪支', '毒品', '淫秽', '色情', '诈骗', '赌博']

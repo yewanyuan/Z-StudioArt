@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/models/schemas.py
+# hypothesis_version: 6.148.5
+
+[100, '16:9', '1:1', '9:16', 'Prompt修饰参数', 'basic', 'daily_limit', 'double_eleven', 'en', 'free', 'high', 'holiday', 'low', 'normal', 'poster', 'premium', 'priority', 'professional', 'promotional', 'scene_fusion', 'spring_festival', 'valentines', 'zh', '剩余配额', '可选模板ID', '商品图像数据', '商品白底图URL', '商品遮罩', '图像URL', '图像二进制数据', '图像唯一标识', '图像宽度', '图像高度', '处理时间(毫秒)', '字体风格', '引导比例', '指定文案', '排版提示', '是否允许', '是否有水印', '模型版本', '模板分类', '模板名称', '模板唯一标识', '生成数量', '生成时间(毫秒)', '生成的图像列表', '画面描述', '目标场景描述', '缩略图URL', '节日类型(仅节日模板)', '融合后图像URL', '被阻止的关键词', '警告消息', '语言', '请求唯一标识', '输出尺寸比例', '边界框(x, y, w, h)', '配色方案', '配额重置时间', '随机种子', '预览图URL', '风格关键词']

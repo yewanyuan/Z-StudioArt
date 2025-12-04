@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/api/templates.py
+# hypothesis_version: 6.148.5
+
+[200, 404, '/api/templates', '/categories/summary', '/{template_id}', 'TEMPLATE_NOT_FOUND', 'by_category', 'code', 'description', 'message', 'templates', 'total', '成功返回模板列表', '成功返回模板详情', '成功返回节日模板列表', '根据模板 ID 获取模板详细信息', '根据节日类型获取对应的模板', '模板未找到', '获取各分类的模板数量统计', '获取所有可用的海报模板，可按分类筛选', '获取模板分类摘要', '获取模板列表', '获取模板详情', '获取节日模板']

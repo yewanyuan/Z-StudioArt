@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "augment-context-engine": {
+      "command": "auggie",
+      "args": [
+        "--mcp",
+        "-m",
+        "default",
+        "-w",
+        "/Users/xiong/Desktop/code/Z-StudioArt"
+      ],
+      "env": {
+        "accessToken": "42e9d046d82b338e68447d3f304021d841ff20e9cf29941d91363aad3b7c55ac",
+        "tenantURL": "https://d10.api.augmentcode.com/"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "codebase-retrieval"
+      ]
+    }
+  }
+}

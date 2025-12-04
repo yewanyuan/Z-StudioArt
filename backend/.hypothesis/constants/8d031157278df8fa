@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/conftest.py
+# hypothesis_version: 6.148.5
+
+['1:1', 'aspect_ratio', 'batch_size', 'bold', 'category', 'color_scheme', 'font_style', 'id', 'language', 'layout_hints', 'marketing_text', 'name', 'preview_url', 'promo_001', 'promotional', 'prompt_modifiers', 'red-gold', 'scene_description', 'style_keywords', 'zh', '促销爆款', '促销风格', '大字号居中', '爆炸贴纸', '现代简约风格的办公桌', '红色背景', '限时特惠 立减50%']

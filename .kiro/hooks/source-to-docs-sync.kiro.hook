@@ -1,0 +1,35 @@
+{
+  "enabled": true,
+  "name": "自动更新文档",
+  "description": "Listens to changes in source files (*.ts, *.js, *.py, *.java, *.go, *.rs, *.cpp, *.c, *.h, package.json, requirements.txt, go.mod, Cargo.toml) and asks the agent to update documentation in README.md or /docs folder with changes described in simplified Chinese",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "*.py",
+      "*.java",
+      "*.go",
+      "*.rs",
+      "*.cpp",
+      "*.c",
+      "*.h",
+      "*.hpp",
+      "package.json",
+      "requirements.txt",
+      "go.mod",
+      "Cargo.toml",
+      "*.rb",
+      "*.php",
+      "*.swift",
+      "*.kt"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "源代码文件已更改。请检查这些更改，并相应地更新项目文档。如果存在 README.md 文件，请更新它；如果存在 /docs 文件夹，请更新那里的相关文档。确保文档准确反映代码的当前状态，包括新功能、API 更改或重要的实现细节。所有文档更新请使用简体中文。"
+  }
+}

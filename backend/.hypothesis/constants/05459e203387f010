@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/services/scene_fusion_service.py
+# hypothesis_version: 6.148.5
+
+[0.01, 30.0, 127, 240, 255, 1000, '16:9', '1:1', '9:16', 'L', 'PNG', 'RGBA', '图像格式无效或无法处理', '无法从图像中提取商品主体', '无法确定商品边界']

@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/api/poster.py
+# hypothesis_version: 6.148.5
+
+[400, 401, 404, 429, 500, '/api/poster', '/generate', '/quota', 'CONTENT_BLOCKED', 'INTERNAL_ERROR', 'INVALID_INPUT', 'RATE_LIMIT_EXCEEDED', 'TEMPLATE_NOT_FOUND', 'UNAUTHORIZED', 'blocked_keywords', 'code', 'current_usage', 'description', 'is_unlimited', 'membership_tier', 'message', 'poster', 'remaining_quota', 'reset_time', 'user_id', '已超出每日生成限额，请明天再试或升级会员', '服务器内部错误', '服务器内部错误，请稍后重试', '未授权', '未提供用户认证信息', '根据场景描述和营销文案生成商业海报', '模板未找到', '生成海报', '获取剩余配额', '获取当前用户的剩余生成配额', '请求参数无效或内容被阻止', '超出限额']

@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/clients/zimage_client.py
+# hypothesis_version: 6.148.6
+
+[1.0, 10.0, 1000, 1024, '/', '16:9', '1:1', '9:16', 'Authorization', 'Content-Type', 'FAILED', 'SUCCEED', 'application/json', 'image_generation', 'model', 'output_images', 'prompt', 'seed', 'size', 'task_id', 'task_status', 'true']

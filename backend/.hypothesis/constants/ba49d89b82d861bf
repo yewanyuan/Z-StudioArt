@@ -1,0 +1,4 @@
+# file: /Users/xiong/Desktop/code/Z-StudioArt/backend/app/clients/zimage_client.py
+# hypothesis_version: 6.148.6
+
+[5.0, 7.5, 1000, 1024, '16:9', '1:1', '9:16', 'guidance_scale', 'height', 'image', 'image/png', 'prompt', 'seed', 'source.png', 'width', 'z-image-turbo-v1']
