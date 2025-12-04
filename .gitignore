@@ -8,7 +8,8 @@ Thumbs.db
 
 # Agent / Tools
 .gemini/
-.kiro/settings/
+.gemini-clipboard/
+.kiro/
 
 # Project specific exclusions that might be in root
 *.log
