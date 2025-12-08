@@ -7,13 +7,21 @@ Requirements:
 - 2.1: 单张生成 5 秒内返回
 - 2.2: 预览模式生成 4 张变体图
 - 6.1: 敏感内容过滤
+- 6.2: 生成成功后保存历史记录
 - 7.1, 7.2, 7.3: 会员水印和限流系统
 """
 
+import logging
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Header, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import (
+    get_current_user_id_hybrid as get_current_user_id,
+    get_current_user_tier_hybrid as get_current_user_tier,
+)
+from app.models.database import get_db_session
 from app.models.schemas import (
     GenerationType,
     MembershipTier,
@@ -22,6 +30,7 @@ from app.models.schemas import (
     RateLimitResult,
 )
 from app.services.content_filter import ContentFilterService, get_content_filter
+from app.services.history_service import HistoryService
 from app.services.membership_service import MembershipService, get_membership_service
 from app.services.poster_service import (
     ContentBlockedError,
@@ -31,6 +40,8 @@ from app.services.poster_service import (
 )
 from app.services.storage_service import StorageService, get_storage_service
 from app.utils.rate_limiter import RateLimiter, get_rate_limiter
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/poster", tags=["poster"])
@@ -47,56 +58,6 @@ class ErrorCode:
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
     TEMPLATE_NOT_FOUND = "TEMPLATE_NOT_FOUND"
     INTERNAL_ERROR = "INTERNAL_ERROR"
-
-
-# ============================================================================
-# Dependencies
-# ============================================================================
-
-async def get_current_user_id(
-    x_user_id: Annotated[Optional[str], Header()] = None,
-) -> str:
-    """获取当前用户 ID
-    
-    从请求头中获取用户 ID。在实际应用中，这应该从 JWT token 或 session 中获取。
-    
-    Args:
-        x_user_id: 请求头中的用户 ID
-        
-    Returns:
-        用户 ID
-        
-    Raises:
-        HTTPException: 如果未提供用户 ID
-    """
-    if not x_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "UNAUTHORIZED", "message": "未提供用户认证信息"},
-        )
-    return x_user_id
-
-
-async def get_current_user_tier(
-    x_user_tier: Annotated[Optional[str], Header()] = None,
-) -> MembershipTier:
-    """获取当前用户会员等级
-    
-    从请求头中获取用户会员等级。在实际应用中，这应该从数据库或缓存中查询。
-    
-    Args:
-        x_user_tier: 请求头中的会员等级
-        
-    Returns:
-        会员等级枚举值
-    """
-    if not x_user_tier:
-        return MembershipTier.FREE
-    
-    try:
-        return MembershipTier(x_user_tier.lower())
-    except ValueError:
-        return MembershipTier.FREE
 
 
 async def check_rate_limit(
@@ -159,7 +120,7 @@ async def generate_poster(
     rate_limit_result: Annotated[RateLimitResult, Depends(check_rate_limit)],
     poster_service: Annotated[PosterService, Depends(get_poster_service)],
     rate_limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
-    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> PosterGenerationResponse:
     """生成海报 API 端点
     
@@ -169,6 +130,7 @@ async def generate_poster(
     3. 内容过滤（在服务层处理）
     4. 调用海报生成服务
     5. 增加用户使用计数
+    6. 保存历史记录
     
     Args:
         request: 海报生成请求
@@ -177,6 +139,7 @@ async def generate_poster(
         rate_limit_result: 限流检查结果
         poster_service: 海报生成服务
         rate_limiter: 限流服务
+        db: 数据库会话
         
     Returns:
         PosterGenerationResponse: 生成结果
@@ -189,30 +152,55 @@ async def generate_poster(
     - 2.1: 5 秒内返回
     - 2.2: 批量生成 4 张
     - 6.1: 敏感内容过滤
+    - 6.2: 生成成功后保存历史记录
     - 7.1, 7.2, 7.3: 会员系统
     """
     try:
-        # 调用海报生成服务
+        # 调用海报生成服务（传递 user_id 用于 S3 存储路径）
+        # Requirements: 5.1 - 生成图片后上传到 S3，返回 CDN URL
         response = await poster_service.generate_poster(
             request=request,
             user_tier=user_tier,
+            user_id=user_id,
         )
-        
-        # 保存到数据库
-        try:
-            await storage_service.save_generation(
-                user_id=user_id,
-                request=request,
-                response=response,
-                generation_type=GenerationType.POSTER,
-            )
-        except Exception as e:
-            # 保存失败不影响返回结果，只记录日志
-            import logging
-            logging.warning(f"Failed to save generation to database: {e}")
         
         # 生成成功后增加使用计数
         await rate_limiter.increment_usage(user_id)
+        
+        # 保存历史记录 - Requirements: 6.2
+        try:
+            history_service = HistoryService(db)
+            
+            # 构建输入参数
+            input_params = {
+                "scene_description": request.scene_description,
+                "marketing_text": request.marketing_text,
+                "language": request.language,
+                "template_id": request.template_id,
+                "aspect_ratio": request.aspect_ratio,
+                "batch_size": request.batch_size,
+            }
+            
+            # 获取输出 URL 列表
+            output_urls = [img.url for img in response.images]
+            
+            # 检查是否有水印
+            has_watermark = any(img.has_watermark for img in response.images)
+            
+            await history_service.create_record(
+                user_id=user_id,
+                generation_type=GenerationType.POSTER,
+                input_params=input_params,
+                output_urls=output_urls,
+                processing_time_ms=response.processing_time_ms,
+                has_watermark=has_watermark,
+            )
+            logger.info(f"Saved poster generation history for user {user_id}")
+        except Exception as history_error:
+            # 历史记录保存失败不应影响主流程
+            # 需要回滚数据库会话以清除错误状态
+            await db.rollback()
+            logger.warning(f"Failed to save history record: {history_error}")
         
         return response
         

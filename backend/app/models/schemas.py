@@ -38,6 +38,30 @@ class GenerationType(str, Enum):
     SCENE_FUSION = "scene_fusion"
 
 
+class PaymentMethod(str, Enum):
+    """支付方式枚举"""
+    ALIPAY = "alipay"
+    WECHAT = "wechat"
+    UNIONPAY = "unionpay"
+
+
+class PaymentStatus(str, Enum):
+    """支付状态枚举"""
+    PENDING = "pending"
+    PAID = "paid"
+    FAILED = "failed"
+    EXPIRED = "expired"
+    REFUNDED = "refunded"
+
+
+class SubscriptionPlan(str, Enum):
+    """订阅计划枚举"""
+    BASIC_MONTHLY = "basic_monthly"      # 基础会员月付
+    BASIC_YEARLY = "basic_yearly"        # 基础会员年付
+    PRO_MONTHLY = "pro_monthly"          # 专业会员月付
+    PRO_YEARLY = "pro_yearly"            # 专业会员年付
+
+
 # ============================================================================
 # Poster Generation Schemas
 # ============================================================================

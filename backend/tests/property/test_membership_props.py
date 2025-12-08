@@ -439,3 +439,380 @@ def test_scene_fusion_access_idempotent(
         f"Got {result1}, {result2}, {result3}"
     )
 
+
+# ============================================================================
+# Property 7: 订阅过期降级
+# **Feature: user-system, Property 7: 订阅过期降级**
+# **Validates: Requirements 4.7**
+#
+# For any user whose membership_expiry is in the past, the membership_tier 
+# SHALL be downgraded to FREE
+# ============================================================================
+
+import uuid
+from datetime import date, datetime, timedelta, timezone
+
+from app.models.database import User
+
+
+def create_test_user(
+    user_id: str = None,
+    phone: str = None,
+    membership_tier: MembershipTier = MembershipTier.FREE,
+    membership_expiry: datetime = None,
+) -> User:
+    """Create a test user with specified attributes."""
+    return User(
+        id=user_id or str(uuid.uuid4()),
+        phone=phone,
+        email=None,
+        password_hash=None,
+        membership_tier=membership_tier,
+        membership_expiry=membership_expiry,
+        daily_usage_count=0,
+        last_usage_date=date.today(),
+    )
+
+
+# Strategy for generating user IDs
+user_id_strategy = st.uuids().map(str)
+
+# Strategy for paid membership tiers (non-FREE)
+paid_tier_strategy = st.sampled_from([MembershipTier.BASIC, MembershipTier.PROFESSIONAL])
+
+# Strategy for generating past expiry times (1 second to 365 days ago)
+past_expiry_strategy = st.integers(min_value=1, max_value=365 * 24 * 3600).map(
+    lambda seconds: datetime.now(timezone.utc) - timedelta(seconds=seconds)
+)
+
+# Strategy for generating future expiry times (1 second to 365 days from now)
+future_expiry_strategy = st.integers(min_value=1, max_value=365 * 24 * 3600).map(
+    lambda seconds: datetime.now(timezone.utc) + timedelta(seconds=seconds)
+)
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+    tier=paid_tier_strategy,
+    past_expiry=past_expiry_strategy,
+)
+def test_expired_subscription_is_detected(
+    user_id: str,
+    tier: MembershipTier,
+    past_expiry: datetime,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any user with membership_expiry in the past,
+    is_subscription_expired SHALL return True.
+    """
+    # Arrange
+    service = MembershipService()
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=tier,
+        membership_expiry=past_expiry,
+    )
+    
+    # Act
+    is_expired = service.is_subscription_expired(user)
+    
+    # Assert
+    assert is_expired is True, (
+        f"User with past expiry ({past_expiry}) should be detected as expired. "
+        f"Got is_expired={is_expired}"
+    )
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+    tier=paid_tier_strategy,
+    future_expiry=future_expiry_strategy,
+)
+def test_active_subscription_is_not_expired(
+    user_id: str,
+    tier: MembershipTier,
+    future_expiry: datetime,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any user with membership_expiry in the future,
+    is_subscription_expired SHALL return False.
+    """
+    # Arrange
+    service = MembershipService()
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=tier,
+        membership_expiry=future_expiry,
+    )
+    
+    # Act
+    is_expired = service.is_subscription_expired(user)
+    
+    # Assert
+    assert is_expired is False, (
+        f"User with future expiry ({future_expiry}) should NOT be detected as expired. "
+        f"Got is_expired={is_expired}"
+    )
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+)
+def test_free_user_is_never_expired(
+    user_id: str,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any FREE tier user, is_subscription_expired SHALL return False
+    regardless of membership_expiry value.
+    """
+    # Arrange
+    service = MembershipService()
+    # Create FREE user with past expiry (edge case)
+    past_expiry = datetime.now(timezone.utc) - timedelta(days=30)
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=MembershipTier.FREE,
+        membership_expiry=past_expiry,
+    )
+    
+    # Act
+    is_expired = service.is_subscription_expired(user)
+    
+    # Assert: FREE users are never considered expired
+    assert is_expired is False, (
+        f"FREE tier user should never be considered expired. "
+        f"Got is_expired={is_expired}"
+    )
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+    tier=paid_tier_strategy,
+    past_expiry=past_expiry_strategy,
+)
+def test_expired_subscription_downgrades_to_free(
+    user_id: str,
+    tier: MembershipTier,
+    past_expiry: datetime,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any user whose membership_expiry is in the past,
+    check_and_downgrade_if_expired SHALL downgrade the user to FREE tier.
+    """
+    # Arrange
+    service = MembershipService()
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=tier,
+        membership_expiry=past_expiry,
+    )
+    
+    # Act
+    was_downgraded = service.check_and_downgrade_if_expired(user)
+    
+    # Assert
+    assert was_downgraded is True, (
+        f"User with expired subscription should be downgraded. "
+        f"Got was_downgraded={was_downgraded}"
+    )
+    assert user.membership_tier == MembershipTier.FREE, (
+        f"User should be downgraded to FREE tier. "
+        f"Got tier={user.membership_tier.value}"
+    )
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+    tier=paid_tier_strategy,
+    future_expiry=future_expiry_strategy,
+)
+def test_active_subscription_not_downgraded(
+    user_id: str,
+    tier: MembershipTier,
+    future_expiry: datetime,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any user with active subscription (future expiry),
+    check_and_downgrade_if_expired SHALL NOT downgrade the user.
+    """
+    # Arrange
+    service = MembershipService()
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=tier,
+        membership_expiry=future_expiry,
+    )
+    original_tier = user.membership_tier
+    
+    # Act
+    was_downgraded = service.check_and_downgrade_if_expired(user)
+    
+    # Assert
+    assert was_downgraded is False, (
+        f"User with active subscription should NOT be downgraded. "
+        f"Got was_downgraded={was_downgraded}"
+    )
+    assert user.membership_tier == original_tier, (
+        f"User tier should remain unchanged. "
+        f"Expected {original_tier.value}, got {user.membership_tier.value}"
+    )
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+    tier=paid_tier_strategy,
+)
+def test_user_without_expiry_not_downgraded(
+    user_id: str,
+    tier: MembershipTier,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any user without membership_expiry set (None),
+    check_and_downgrade_if_expired SHALL NOT downgrade the user.
+    """
+    # Arrange
+    service = MembershipService()
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=tier,
+        membership_expiry=None,  # No expiry set
+    )
+    original_tier = user.membership_tier
+    
+    # Act
+    was_downgraded = service.check_and_downgrade_if_expired(user)
+    
+    # Assert
+    assert was_downgraded is False, (
+        f"User without expiry should NOT be downgraded. "
+        f"Got was_downgraded={was_downgraded}"
+    )
+    assert user.membership_tier == original_tier, (
+        f"User tier should remain unchanged. "
+        f"Expected {original_tier.value}, got {user.membership_tier.value}"
+    )
+
+
+@settings(max_examples=100)
+@given(
+    user_id=user_id_strategy,
+    tier=paid_tier_strategy,
+    past_expiry=past_expiry_strategy,
+)
+def test_downgrade_is_idempotent(
+    user_id: str,
+    tier: MembershipTier,
+    past_expiry: datetime,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any expired user, calling check_and_downgrade_if_expired
+    multiple times SHALL result in the same final state (idempotent).
+    """
+    # Arrange
+    service = MembershipService()
+    user = create_test_user(
+        user_id=user_id,
+        membership_tier=tier,
+        membership_expiry=past_expiry,
+    )
+    
+    # Act: Call multiple times
+    result1 = service.check_and_downgrade_if_expired(user)
+    tier_after_first = user.membership_tier
+    
+    result2 = service.check_and_downgrade_if_expired(user)
+    tier_after_second = user.membership_tier
+    
+    result3 = service.check_and_downgrade_if_expired(user)
+    tier_after_third = user.membership_tier
+    
+    # Assert: First call should downgrade, subsequent calls should not
+    assert result1 is True, "First call should downgrade"
+    assert result2 is False, "Second call should not downgrade (already FREE)"
+    assert result3 is False, "Third call should not downgrade (already FREE)"
+    
+    # All tiers should be FREE after first downgrade
+    assert tier_after_first == MembershipTier.FREE
+    assert tier_after_second == MembershipTier.FREE
+    assert tier_after_third == MembershipTier.FREE
+
+
+@settings(max_examples=100)
+@given(
+    num_users=st.integers(min_value=1, max_value=10),
+)
+def test_batch_check_expired_users(
+    num_users: int,
+) -> None:
+    """
+    **Feature: user-system, Property 7: 订阅过期降级**
+    **Validates: Requirements 4.7**
+    
+    Property: For any batch of users with mixed expiry states,
+    check_expired_users SHALL downgrade only the expired users.
+    """
+    # Arrange
+    service = MembershipService()
+    users = []
+    expected_downgraded_count = 0
+    
+    for i in range(num_users):
+        # Alternate between expired and active users
+        if i % 2 == 0:
+            # Expired user
+            expiry = datetime.now(timezone.utc) - timedelta(days=i + 1)
+            tier = MembershipTier.BASIC if i % 4 == 0 else MembershipTier.PROFESSIONAL
+            expected_downgraded_count += 1
+        else:
+            # Active user
+            expiry = datetime.now(timezone.utc) + timedelta(days=i + 1)
+            tier = MembershipTier.BASIC if i % 4 == 1 else MembershipTier.PROFESSIONAL
+        
+        user = create_test_user(
+            user_id=str(uuid.uuid4()),
+            membership_tier=tier,
+            membership_expiry=expiry,
+        )
+        users.append(user)
+    
+    # Act
+    downgraded = service.check_expired_users(users)
+    
+    # Assert
+    assert len(downgraded) == expected_downgraded_count, (
+        f"Expected {expected_downgraded_count} users to be downgraded, "
+        f"got {len(downgraded)}"
+    )
+    
+    # Verify all downgraded users are now FREE
+    for user in downgraded:
+        assert user.membership_tier == MembershipTier.FREE, (
+            f"Downgraded user should be FREE tier. Got {user.membership_tier.value}"
+        )

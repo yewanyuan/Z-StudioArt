@@ -29,7 +29,10 @@
 ### Backend (后端)
 *   **Framework**: FastAPI (Python)
 *   **AI Model**: ModelScope Z-Image-Turbo (via API)
+*   **Database**: PostgreSQL + SQLAlchemy
+*   **Cache**: Redis
 *   **Image Processing**: Pillow (PIL) for watermarking & resizing
+*   **Testing**: Pytest + Hypothesis (Property-Based Testing)
 *   **Concurrency**: Python Asyncio
 
 ---
@@ -118,6 +121,38 @@ npm run dev
 3.  提交更改 (`git commit -m 'Add some AmazingFeature'`)
 4.  推送到分支 (`git push origin feature/AmazingFeature`)
 5.  提交 Pull Request
+
+## � D可ocker 部署
+
+使用 Docker Compose 快速部署：
+
+```bash
+# 配置环境变量
+cp backend/.env.example backend/.env
+# 编辑 backend/.env 填入必要配置
+
+# 启动所有服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+```
+
+详细部署指南请参考 [DEPLOYMENT.md](./DEPLOYMENT.md)。
+
+## 🧪 运行测试
+
+### 后端测试
+```bash
+cd backend
+pytest tests/ -v
+```
+
+### 前端测试
+```bash
+cd frontend
+npm test
+```
 
 ## 📄 许可证 (License)
 

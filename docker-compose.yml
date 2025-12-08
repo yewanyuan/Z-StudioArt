@@ -1,0 +1,76 @@
+# PopGraph Docker Compose Configuration
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build: ./backend
+    container_name: popgraph-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://popgraph:popgraph@db:5432/popgraph
+      - REDIS_URL=redis://redis:6379/0
+      - ENABLE_SCHEDULER=true
+      - CORS_ORIGINS=http://localhost,http://localhost:80
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - popgraph-network
+
+  # Frontend Web Service
+  frontend:
+    build: ./frontend
+    container_name: popgraph-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - popgraph-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:14-alpine
+    container_name: popgraph-db
+    environment:
+      - POSTGRES_USER=popgraph
+      - POSTGRES_PASSWORD=popgraph
+      - POSTGRES_DB=popgraph
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U popgraph"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - popgraph-network
+
+  # Redis Cache
+  redis:
+    image: redis:6-alpine
+    container_name: popgraph-redis
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - popgraph-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  popgraph-network:
+    driver: bridge

@@ -13,12 +13,15 @@ Requirements:
 - 4.3: WHEN the PopGraph System performs scene fusion THEN the PopGraph System 
        SHALL ensure seamless integration between product and background with 
        consistent lighting and perspective
+- 5.1: 生成图片后上传到 S3，返回 CDN URL
 """
 
+import base64
 import io
+import logging
 import time
 import uuid
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 import httpx
 from PIL import Image
@@ -43,6 +46,11 @@ from app.services.membership_service import (
     get_membership_service,
 )
 from app.utils.prompt_builder import PromptBuilder
+
+if TYPE_CHECKING:
+    from app.services.storage_service import StorageService
+
+logger = logging.getLogger(__name__)
 
 
 class SceneFusionError(Exception):
@@ -235,6 +243,7 @@ class SceneFusionService:
     - 4.1: 准确提取商品主体
     - 4.2: 生成匹配描述的新背景
     - 4.3: 确保无缝融合，光照和透视一致
+    - 5.1: 生成图片后上传到 S3，返回 CDN URL
     """
     
     def __init__(
@@ -244,6 +253,7 @@ class SceneFusionService:
         zimage_client: Optional[ZImageTurboClient] = None,
         membership_service: Optional[MembershipService] = None,
         product_extractor: Optional[ProductExtractor] = None,
+        storage_service: Optional["StorageService"] = None,
     ):
         """初始化场景融合服务
         
@@ -253,12 +263,14 @@ class SceneFusionService:
             zimage_client: Z-Image-Turbo 客户端
             membership_service: 会员服务
             product_extractor: 商品提取器
+            storage_service: 存储服务（用于上传图片到 S3）
         """
         self._prompt_builder = prompt_builder or PromptBuilder()
         self._content_filter = content_filter or get_content_filter()
         self._zimage_client = zimage_client or ZImageTurboClient()
         self._membership_service = membership_service or get_membership_service()
         self._product_extractor = product_extractor or ProductExtractor()
+        self._storage_service = storage_service
     
     async def extract_product(self, image_url: str) -> ExtractedProduct:
         """从 URL 加载图像并提取商品主体
@@ -316,6 +328,7 @@ class SceneFusionService:
         product: ExtractedProduct,
         scene: str,
         aspect_ratio: Literal["1:1", "9:16", "16:9"] = "1:1",
+        user_id: Optional[str] = None,
     ) -> SceneFusionResponse:
         """将商品与场景融合
         
@@ -325,6 +338,7 @@ class SceneFusionService:
             product: 提取的商品信息
             scene: 目标场景描述
             aspect_ratio: 输出尺寸比例
+            user_id: 用户 ID（用于存储路径）
             
         Returns:
             SceneFusionResponse: 融合结果
@@ -332,6 +346,7 @@ class SceneFusionService:
         Requirements:
         - 4.2: 生成匹配描述的新背景
         - 4.3: 确保无缝融合
+        - 5.1: 生成图片后上传到 S3，返回 CDN URL
         """
         start_time = time.perf_counter()
         request_id = str(uuid.uuid4())
@@ -356,10 +371,10 @@ class SceneFusionService:
         # 计算处理时间
         processing_time_ms = int((time.perf_counter() - start_time) * 1000)
         
-        # 转换为 base64
-        import base64
-        image_base64 = base64.b64encode(result.image_buffer).decode("utf-8")
-        fused_image_url = f"data:image/png;base64,{image_base64}"
+        # 尝试上传到 S3，如果失败则回退到 Base64
+        fused_image_url, _, image_base64 = await self._upload_or_fallback(
+            result.image_buffer, user_id or "anonymous", request_id
+        )
         
         return SceneFusionResponse(
             request_id=request_id,
@@ -368,10 +383,61 @@ class SceneFusionService:
             image_base64=image_base64
         )
     
+    async def _upload_or_fallback(
+        self,
+        image_data: bytes,
+        user_id: str,
+        image_id: str,
+    ) -> tuple[str, str, Optional[str]]:
+        """上传图片到 S3，失败时回退到 Base64
+        
+        Args:
+            image_data: 图片二进制数据
+            user_id: 用户 ID
+            image_id: 图片 ID
+            
+        Returns:
+            (url, thumbnail_url, image_base64) 元组
+            - 如果 S3 上传成功，返回 CDN URL，image_base64 为 None
+            - 如果 S3 不可用，返回 data URL，image_base64 为 Base64 字符串
+            
+        Requirements: 5.1, 5.5 - 上传到 S3，S3 不可用时回退到 Base64
+        """
+        # 如果没有配置存储服务，使用 Base64 回退
+        if self._storage_service is None:
+            logger.debug("存储服务未配置，使用 Base64 回退")
+            image_base64 = base64.b64encode(image_data).decode("utf-8")
+            data_url = f"data:image/png;base64,{image_base64}"
+            return data_url, data_url, image_base64
+        
+        try:
+            # 尝试上传到 S3
+            url, thumbnail_url = await self._storage_service.upload_image(
+                image_data, user_id
+            )
+            
+            # S3 上传成功，检查是否返回的是 CDN URL 还是 Base64 回退
+            if url.startswith("data:"):
+                # 存储服务内部已经回退到 Base64
+                image_base64 = url.split(",", 1)[1] if "," in url else None
+                return url, thumbnail_url, image_base64
+            
+            # 返回 CDN URL，不需要 Base64
+            logger.info(f"图片上传成功: {url}")
+            return url, thumbnail_url, None
+            
+        except Exception as e:
+            # S3 上传失败，回退到 Base64
+            logger.warning(f"S3 上传失败，使用 Base64 回退: {e}")
+            image_base64 = base64.b64encode(image_data).decode("utf-8")
+            data_url = f"data:image/png;base64,{image_base64}"
+            return data_url, data_url, image_base64
+    
     async def process_scene_fusion(
         self,
         request: SceneFusionRequest,
         user_tier: MembershipTier = MembershipTier.PROFESSIONAL,
+        user_id: Optional[str] = None,
     ) -> SceneFusionResponse:
         """处理完整的场景融合请求
         
@@ -380,10 +446,12 @@ class SceneFusionService:
         2. 检查内容安全
         3. 提取商品主体
         4. 生成场景融合图像
+        5. 上传到 S3 存储（如果可用）
         
         Args:
             request: 场景融合请求
             user_tier: 用户会员等级
+            user_id: 用户 ID（用于存储路径）
             
         Returns:
             SceneFusionResponse: 融合结果
@@ -396,6 +464,7 @@ class SceneFusionService:
             
         Requirements:
         - 4.1, 4.2, 4.3: 场景融合功能
+        - 5.1: 生成图片后上传到 S3，返回 CDN URL
         - 7.4: 专业会员权限检查
         """
         # Step 1: 检查用户权限
@@ -410,11 +479,12 @@ class SceneFusionService:
         # Step 3: 提取商品主体
         product = await self.extract_product(request.product_image_url)
         
-        # Step 4: 执行场景融合
+        # Step 4: 执行场景融合（包含 S3 上传）
         return await self.fuse_with_scene(
             product=product,
             scene=request.target_scene,
-            aspect_ratio=request.aspect_ratio
+            aspect_ratio=request.aspect_ratio,
+            user_id=user_id,
         )
     
     async def process_scene_fusion_with_bytes(
@@ -423,6 +493,7 @@ class SceneFusionService:
         target_scene: str,
         aspect_ratio: Literal["1:1", "9:16", "16:9"],
         user_tier: MembershipTier = MembershipTier.PROFESSIONAL,
+        user_id: Optional[str] = None,
     ) -> tuple[SceneFusionResponse, bytes]:
         """处理场景融合并返回图像数据
         
@@ -433,9 +504,14 @@ class SceneFusionService:
             target_scene: 目标场景描述
             aspect_ratio: 输出尺寸比例
             user_tier: 用户会员等级
+            user_id: 用户 ID（用于存储路径）
             
         Returns:
             (SceneFusionResponse, bytes): 响应和融合后的图像数据
+            
+        Requirements:
+        - 4.1, 4.2, 4.3: 场景融合功能
+        - 5.1: 生成图片后上传到 S3，返回 CDN URL
         """
         start_time = time.perf_counter()
         request_id = str(uuid.uuid4())
@@ -472,10 +548,16 @@ class SceneFusionService:
         # 计算处理时间
         processing_time_ms = int((time.perf_counter() - start_time) * 1000)
         
+        # 尝试上传到 S3，如果失败则回退到 Base64
+        fused_image_url, _, image_base64 = await self._upload_or_fallback(
+            result.image_buffer, user_id or "anonymous", request_id
+        )
+        
         response = SceneFusionResponse(
             request_id=request_id,
-            fused_image_url=f"/generated/fusion/{request_id}.png",
-            processing_time_ms=processing_time_ms
+            fused_image_url=fused_image_url,
+            processing_time_ms=processing_time_ms,
+            image_base64=image_base64,
         )
         
         return response, result.image_buffer
@@ -493,5 +575,9 @@ def get_scene_fusion_service() -> SceneFusionService:
     """
     global _default_service
     if _default_service is None:
-        _default_service = SceneFusionService()
+        # 延迟导入以避免循环依赖
+        from app.services.storage_service import get_storage_service
+        _default_service = SceneFusionService(
+            storage_service=get_storage_service()
+        )
     return _default_service

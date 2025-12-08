@@ -15,3 +15,10 @@ export { ResultGallery } from './ResultGallery';
 // 页面组件
 export { PosterGeneratorPage } from './PosterGeneratorPage';
 export { SceneFusionPage } from './SceneFusionPage';
+
+// 路由组件
+export { ProtectedRoute, PublicRoute } from './ProtectedRoute';
+
+// 模态框组件
+export { ImageDetailModal } from './ImageDetailModal';
+export { PaymentModal } from './PaymentModal';

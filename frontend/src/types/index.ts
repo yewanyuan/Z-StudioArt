@@ -105,3 +105,168 @@ export interface GenerationState {
   error?: string;
   images: GeneratedImage[];
 }
+
+// ============================================================================
+// Auth Types
+// ============================================================================
+
+export interface User {
+  id: string;
+  phone?: string;
+  email?: string;
+  membership_tier: MembershipTier;
+  membership_expiry?: string;
+}
+
+export interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface AuthState {
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
+
+// Auth API Request/Response Types
+export interface SendCodeRequest {
+  phone: string;
+}
+
+export interface PhoneLoginRequest {
+  phone: string;
+  code: string;
+}
+
+export interface PhoneRegisterRequest {
+  phone: string;
+  code: string;
+}
+
+export interface EmailLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface EmailRegisterRequest {
+  email: string;
+  password: string;
+}
+
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface UserResponse {
+  id: string;
+  phone?: string;
+  email?: string;
+  membership_tier: MembershipTier;
+  membership_expiry?: string;
+}
+
+export interface AuthResponse {
+  user: UserResponse;
+  tokens: TokenResponse;
+}
+
+// ============================================================================
+// History Types (Requirements: 6.1, 6.3, 6.4, 9.1)
+// ============================================================================
+
+export type GenerationType = 'poster' | 'scene_fusion';
+
+export interface HistoryItem {
+  id: string;
+  type: GenerationType;
+  thumbnail_url: string | null;
+  created_at: string;
+  input_params: Record<string, unknown>;
+  output_urls: string[];
+  processing_time_ms: number;
+  has_watermark: boolean;
+}
+
+export interface HistoryListResponse {
+  items: HistoryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+export interface HistoryDetailResponse {
+  id: string;
+  type: GenerationType;
+  created_at: string;
+  input_params: Record<string, unknown>;
+  output_urls: string[];
+  processing_time_ms: number;
+  has_watermark: boolean;
+}
+
+export interface DeleteHistoryResponse {
+  success: boolean;
+  message: string;
+}
+
+// ============================================================================
+// Payment Types (Requirements: 4.1, 4.9)
+// ============================================================================
+
+export type PaymentMethod = 'alipay' | 'wechat' | 'unionpay';
+
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
+
+export type SubscriptionPlan = 'basic_monthly' | 'basic_yearly' | 'pro_monthly' | 'pro_yearly';
+
+export interface PlanResponse {
+  plan: SubscriptionPlan;
+  name: string;
+  price: number;
+  price_display: string;
+  tier: MembershipTier;
+  duration_days: number;
+  description: string;
+}
+
+export interface PlansListResponse {
+  plans: PlanResponse[];
+}
+
+export interface CreateOrderRequest {
+  plan: SubscriptionPlan;
+  method: PaymentMethod;
+}
+
+export interface OrderResponse {
+  order_id: string;
+  user_id: string;
+  plan: SubscriptionPlan;
+  method: PaymentMethod;
+  amount: number;
+  amount_display: string;
+  status: PaymentStatus;
+  payment_url: string | null;
+  qrcode_content: string | null;
+  created_at: string;
+  expires_in_seconds: number;
+}
+
+export interface OrderStatusResponse {
+  order_id: string;
+  status: PaymentStatus;
+  paid_at: string | null;
+}

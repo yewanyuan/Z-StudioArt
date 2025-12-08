@@ -1,7 +1,7 @@
 """Membership Service for PopGraph.
 
 This module implements membership-related business logic including
-watermark rules and feature access permissions.
+watermark rules, feature access permissions, and subscription expiry management.
 
 Requirements:
 - 7.1: WHEN a free-tier user generates a poster THEN the PopGraph System 
@@ -10,13 +10,23 @@ Requirements:
        SHALL produce output without watermark and with priority processing
 - 7.4: WHEN a professional member requests scene fusion feature THEN the 
        PopGraph System SHALL grant access to the product visualization functionality
+- 4.7: WHEN a subscription expires THEN THE Subscription_Service SHALL 
+       downgrade the user to FREE tier
 """
 
+import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from app.models.schemas import MembershipTier
+
+if TYPE_CHECKING:
+    from app.models.database import User
+
+
+logger = logging.getLogger(__name__)
 
 
 class Feature(str, Enum):
@@ -264,6 +274,115 @@ class MembershipService:
             该等级可用的功能集合
         """
         return MEMBERSHIP_FEATURES.get(tier, set()).copy()
+    
+    # ========================================================================
+    # Subscription Expiry Management
+    # ========================================================================
+    
+    def is_subscription_expired(self, user: "User") -> bool:
+        """检查用户订阅是否已过期
+        
+        Args:
+            user: 用户对象
+            
+        Returns:
+            True 如果订阅已过期，False 如果未过期或无订阅
+            
+        Requirements:
+            - 4.7: 检查订阅是否过期
+        """
+        # FREE 用户没有订阅，不算过期
+        if user.membership_tier == MembershipTier.FREE:
+            return False
+        
+        # 没有设置过期时间，视为永久有效（不过期）
+        if user.membership_expiry is None:
+            return False
+        
+        # 确保时区一致性
+        expiry = user.membership_expiry
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        
+        now = datetime.now(timezone.utc)
+        return now > expiry
+    
+    def check_and_downgrade_if_expired(self, user: "User") -> bool:
+        """检查用户订阅并在过期时降级
+        
+        如果用户订阅已过期，将其降级为 FREE 等级。
+        
+        Args:
+            user: 用户对象
+            
+        Returns:
+            True 如果进行了降级，False 如果未降级
+            
+        Requirements:
+            - 4.7: WHEN a subscription expires THEN THE Subscription_Service 
+                   SHALL downgrade the user to FREE tier
+        """
+        if not self.is_subscription_expired(user):
+            return False
+        
+        old_tier = user.membership_tier
+        user.membership_tier = MembershipTier.FREE
+        user.updated_at = datetime.now(timezone.utc)
+        
+        logger.info(
+            f"User subscription expired and downgraded: user_id={user.id}, "
+            f"old_tier={old_tier.value}, new_tier={MembershipTier.FREE.value}"
+        )
+        
+        return True
+    
+    def downgrade_to_free(self, user: "User") -> "User":
+        """将用户降级为 FREE 等级
+        
+        Args:
+            user: 用户对象
+            
+        Returns:
+            更新后的用户对象
+            
+        Requirements:
+            - 4.7: 订阅过期后降级为 FREE
+        """
+        user.membership_tier = MembershipTier.FREE
+        user.updated_at = datetime.now(timezone.utc)
+        
+        logger.info(
+            f"User downgraded to FREE: user_id={user.id}"
+        )
+        
+        return user
+    
+    def check_expired_users(self, users: list["User"]) -> list["User"]:
+        """批量检查并降级过期用户
+        
+        用于定时任务批量处理过期订阅。
+        
+        Args:
+            users: 用户列表
+            
+        Returns:
+            被降级的用户列表
+            
+        Requirements:
+            - 4.7: 定时检查过期订阅并降级
+        """
+        downgraded_users = []
+        
+        for user in users:
+            if self.check_and_downgrade_if_expired(user):
+                downgraded_users.append(user)
+        
+        if downgraded_users:
+            logger.info(
+                f"Batch expiry check completed: {len(downgraded_users)} users downgraded"
+            )
+        
+        return downgraded_users
 
 
 # 创建默认的全局实例

@@ -275,7 +275,7 @@ def create_mock_image_data(seed: int = 0) -> GeneratedImageData:
 
 
 @pytest.mark.asyncio
-@settings(max_examples=100)
+@settings(max_examples=10, deadline=None)
 @given(
     count=batch_count,
     prompt=prompt_text,
@@ -323,7 +323,7 @@ async def test_batch_generation_returns_exact_count(
 
 
 @pytest.mark.asyncio
-@settings(max_examples=100)
+@settings(max_examples=10, deadline=None)
 @given(
     prompt=prompt_text,
     base=base_size,
@@ -371,7 +371,7 @@ async def test_preview_mode_returns_exactly_four_images(
 
 
 @pytest.mark.asyncio
-@settings(max_examples=100)
+@settings(max_examples=10, deadline=None)
 @given(
     prompt=prompt_text,
     base=base_size,

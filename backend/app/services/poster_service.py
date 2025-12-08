@@ -11,14 +11,16 @@ Requirements:
 - 1.5: 商业广告风格的专业视觉质量
 - 2.1: 单张生成 5 秒内返回
 - 2.2: 预览模式生成 4 张变体图
+- 5.1: 生成图片后上传到 S3，返回 CDN URL
 - 7.1, 7.3: 根据会员等级添加水印
 """
 
 import base64
 import io
+import logging
 import time
 import uuid
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -43,6 +45,11 @@ from app.services.membership_service import (
 )
 from app.services.template_service import TemplateService
 from app.utils.prompt_builder import PromptBuilder
+
+if TYPE_CHECKING:
+    from app.services.storage_service import StorageService
+
+logger = logging.getLogger(__name__)
 
 
 class PosterGenerationError(Exception):
@@ -190,6 +197,7 @@ class PosterService:
     Requirements:
     - 1.1, 1.2, 1.3, 1.4, 1.5: 智能文案海报生成
     - 2.1, 2.2: 极速生成模式
+    - 5.1: 生成图片后上传到 S3，返回 CDN URL
     - 7.1, 7.3: 会员水印系统
     """
     
@@ -201,6 +209,7 @@ class PosterService:
         zimage_client: Optional[ZImageTurboClient] = None,
         membership_service: Optional[MembershipService] = None,
         watermark_processor: Optional[WatermarkProcessor] = None,
+        storage_service: Optional["StorageService"] = None,
     ):
         """初始化海报生成服务
         
@@ -211,6 +220,7 @@ class PosterService:
             zimage_client: Z-Image-Turbo 客户端
             membership_service: 会员服务
             watermark_processor: 水印处理器
+            storage_service: 存储服务（用于上传图片到 S3）
         """
         self._prompt_builder = prompt_builder or PromptBuilder()
         self._content_filter = content_filter or get_content_filter()
@@ -218,11 +228,13 @@ class PosterService:
         self._zimage_client = zimage_client or ZImageTurboClient()
         self._membership_service = membership_service or get_membership_service()
         self._watermark_processor = watermark_processor or WatermarkProcessor()
+        self._storage_service = storage_service
     
     async def generate_poster(
         self,
         request: PosterGenerationRequest,
         user_tier: MembershipTier = MembershipTier.FREE,
+        user_id: Optional[str] = None,
         storage_base_url: str = "/generated",
     ) -> PosterGenerationResponse:
         """生成海报
@@ -232,11 +244,13 @@ class PosterService:
         2. 构建 Prompt（可选应用模板）
         3. 调用 AI 模型生成图像
         4. 根据会员等级添加水印
-        5. 返回生成结果
+        5. 上传到 S3 存储（如果可用）
+        6. 返回生成结果
         
         Args:
             request: 海报生成请求
             user_tier: 用户会员等级
+            user_id: 用户 ID（用于存储路径）
             storage_base_url: 图像存储基础 URL
             
         Returns:
@@ -250,6 +264,7 @@ class PosterService:
         - 1.1, 1.2: 支持中英文文案
         - 2.1: 5 秒内返回
         - 2.2: 批量生成 4 张
+        - 5.1: 生成图片后上传到 S3，返回 CDN URL
         - 7.1, 7.3: 水印规则
         """
         start_time = time.perf_counter()
@@ -280,7 +295,7 @@ class PosterService:
         # Step 5: 获取水印规则
         watermark_rule = self._membership_service.get_watermark_rule(user_tier)
         
-        # Step 6: 处理生成的图像（添加水印等）
+        # Step 6: 处理生成的图像（添加水印、上传到 S3）
         generated_images = []
         for i, image_data in enumerate(image_data_list):
             # 添加水印
@@ -289,16 +304,19 @@ class PosterService:
                 watermark_rule,
             )
             
-            # 转换为 base64
-            image_base64 = base64.b64encode(processed_image).decode("utf-8")
-            
             # 创建图像记录
             image_id = f"{request_id}-{i}"
+            
+            # 尝试上传到 S3，如果失败则回退到 Base64
+            url, thumbnail_url, image_base64 = await self._upload_or_fallback(
+                processed_image, user_id or "anonymous", image_id
+            )
+            
             generated_images.append(
                 GeneratedImage(
                     id=image_id,
-                    url=f"data:image/png;base64,{image_base64}",
-                    thumbnail_url=f"data:image/png;base64,{image_base64}",
+                    url=url,
+                    thumbnail_url=thumbnail_url,
                     has_watermark=watermark_rule.should_add_watermark,
                     width=width,
                     height=height,
@@ -314,6 +332,56 @@ class PosterService:
             images=generated_images,
             processing_time_ms=processing_time_ms,
         )
+    
+    async def _upload_or_fallback(
+        self,
+        image_data: bytes,
+        user_id: str,
+        image_id: str,
+    ) -> tuple[str, str, Optional[str]]:
+        """上传图片到 S3，失败时回退到 Base64
+        
+        Args:
+            image_data: 图片二进制数据
+            user_id: 用户 ID
+            image_id: 图片 ID
+            
+        Returns:
+            (url, thumbnail_url, image_base64) 元组
+            - 如果 S3 上传成功，返回 CDN URL，image_base64 为 None
+            - 如果 S3 不可用，返回 data URL，image_base64 为 Base64 字符串
+            
+        Requirements: 5.1, 5.5 - 上传到 S3，S3 不可用时回退到 Base64
+        """
+        # 如果没有配置存储服务，使用 Base64 回退
+        if self._storage_service is None:
+            logger.debug("存储服务未配置，使用 Base64 回退")
+            image_base64 = base64.b64encode(image_data).decode("utf-8")
+            data_url = f"data:image/png;base64,{image_base64}"
+            return data_url, data_url, image_base64
+        
+        try:
+            # 尝试上传到 S3
+            url, thumbnail_url = await self._storage_service.upload_image(
+                image_data, user_id
+            )
+            
+            # S3 上传成功，检查是否返回的是 CDN URL 还是 Base64 回退
+            if url.startswith("data:"):
+                # 存储服务内部已经回退到 Base64
+                image_base64 = url.split(",", 1)[1] if "," in url else None
+                return url, thumbnail_url, image_base64
+            
+            # 返回 CDN URL，不需要 Base64
+            logger.info(f"图片上传成功: {url}")
+            return url, thumbnail_url, None
+            
+        except Exception as e:
+            # S3 上传失败，回退到 Base64
+            logger.warning(f"S3 上传失败，使用 Base64 回退: {e}")
+            image_base64 = base64.b64encode(image_data).decode("utf-8")
+            data_url = f"data:image/png;base64,{image_base64}"
+            return data_url, data_url, image_base64
     
     async def _check_content(self, request: PosterGenerationRequest) -> None:
         """检查请求内容是否包含敏感词
@@ -464,5 +532,9 @@ def get_poster_service() -> PosterService:
     """
     global _default_service
     if _default_service is None:
-        _default_service = PosterService()
+        # 延迟导入以避免循环依赖
+        from app.services.storage_service import get_storage_service
+        _default_service = PosterService(
+            storage_service=get_storage_service()
+        )
     return _default_service

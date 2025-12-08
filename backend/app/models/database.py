@@ -23,7 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 from app.core.config import settings
-from app.models.schemas import GenerationType, MembershipTier, TemplateCategory
+from app.models.schemas import (
+    GenerationType,
+    MembershipTier,
+    PaymentMethod,
+    PaymentStatus,
+    SubscriptionPlan,
+    TemplateCategory,
+)
 
 
 # ============================================================================
@@ -80,11 +87,14 @@ class User(Base):
     """用户模型
     
     Requirements: 7.1, 7.2, 7.3, 7.4 - 会员等级和权限管理
+    Requirements: 1.1, 1.5, 2.1 - 用户认证和注册
     """
     __tablename__ = "users"
 
     id: str = Column(String(36), primary_key=True)
-    email: str = Column(String(255), unique=True, nullable=False, index=True)
+    phone: Optional[str] = Column(String(20), unique=True, nullable=True, index=True)
+    email: Optional[str] = Column(String(255), unique=True, nullable=True, index=True)
+    password_hash: Optional[str] = Column(String(255), nullable=True)
     membership_tier: MembershipTier = Column(
         Enum(MembershipTier),
         default=MembershipTier.FREE,
@@ -107,9 +117,10 @@ class User(Base):
 
     # Relationships
     generation_records = relationship("GenerationRecord", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
 
     def __repr__(self) -> str:
-        return f"<User(id={self.id}, email={self.email}, tier={self.membership_tier})>"
+        return f"<User(id={self.id}, phone={self.phone}, email={self.email}, tier={self.membership_tier})>"
 
 
 # ============================================================================
@@ -222,6 +233,94 @@ class TemplateRecord(Base):
 
     def __repr__(self) -> str:
         return f"<TemplateRecord(id={self.id}, name={self.name}, category={self.category})>"
+
+
+# ============================================================================
+# Authentication Models
+# ============================================================================
+
+class RefreshToken(Base):
+    """刷新令牌模型
+    
+    Requirements: 2.1, 2.3, 3.1 - Token 管理和登出
+    """
+    __tablename__ = "refresh_tokens"
+
+    id: str = Column(String(36), primary_key=True)
+    user_id: str = Column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    token_hash: str = Column(String(255), nullable=False, index=True)
+    expires_at: datetime = Column(DateTime, nullable=False)
+    created_at: datetime = Column(DateTime, nullable=False, default=func.now())
+    is_revoked: bool = Column(Boolean, default=False, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="refresh_tokens")
+
+    def __repr__(self) -> str:
+        return f"<RefreshToken(id={self.id}, user_id={self.user_id}, revoked={self.is_revoked})>"
+
+
+class VerificationCode(Base):
+    """短信验证码模型
+    
+    Requirements: 1.1, 1.6 - 验证码发送和验证
+    """
+    __tablename__ = "verification_codes"
+
+    id: str = Column(String(36), primary_key=True)
+    phone: str = Column(String(20), nullable=False, index=True)
+    code: str = Column(String(6), nullable=False)
+    expires_at: datetime = Column(DateTime, nullable=False)
+    created_at: datetime = Column(DateTime, nullable=False, default=func.now())
+    is_used: bool = Column(Boolean, default=False, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<VerificationCode(id={self.id}, phone={self.phone}, used={self.is_used})>"
+
+
+# ============================================================================
+# Payment Models
+# ============================================================================
+
+class PaymentOrder(Base):
+    """支付订单模型
+    
+    Requirements: 4.1, 4.5, 4.9 - 支付订单管理
+    """
+    __tablename__ = "payment_orders"
+
+    id: str = Column(String(36), primary_key=True)
+    user_id: str = Column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    plan: SubscriptionPlan = Column(Enum(SubscriptionPlan), nullable=False)
+    method: PaymentMethod = Column(Enum(PaymentMethod), nullable=False)
+    amount: int = Column(Integer, nullable=False)  # 金额（分）
+    status: PaymentStatus = Column(
+        Enum(PaymentStatus),
+        default=PaymentStatus.PENDING,
+        nullable=False,
+    )
+    external_order_id: Optional[str] = Column(String(100), nullable=True)
+    paid_at: Optional[datetime] = Column(DateTime, nullable=True)
+    created_at: datetime = Column(DateTime, nullable=False, default=func.now())
+    updated_at: datetime = Column(
+        DateTime,
+        nullable=False,
+        default=func.now(),
+        onupdate=func.now(),
+    )
+
+    def __repr__(self) -> str:
+        return f"<PaymentOrder(id={self.id}, user_id={self.user_id}, status={self.status})>"
 
 
 # ============================================================================
