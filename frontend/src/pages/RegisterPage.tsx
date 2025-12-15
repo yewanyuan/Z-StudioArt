@@ -1,6 +1,6 @@
 /**
  * 注册页面组件
- * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
+ * Based on Mathilda Art Gallery Template - Contact Form Style
  * 支持手机验证码注册和邮箱密码注册
  */
 
@@ -143,225 +143,228 @@ export function RegisterPage() {
   const canSubmitPhone = isValidPhone(phone) && code.length === 6 && !isSubmitting;
   const canSubmitEmail = isValidEmail(email) && password.length >= 8 && password === confirmPassword && !isSubmitting;
 
-
   return (
-    <div className="min-h-screen bg-[#0f172a] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">创建账户</h1>
-          <p className="text-gray-400 mt-2">注册 PopGraph 开始创作</p>
-        </div>
+    <div className="min-h-screen bg-white relative">
+      {/* Background Curve */}
+      <div className="bg-curve" />
 
-        {/* Register Card */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl">
-          {/* Tab Switcher */}
-          <div className="flex mb-6 p-1 bg-black/20 rounded-xl">
-            <button
-              type="button"
-              onClick={() => {
-                setRegisterMethod('phone');
-                setError(null);
-              }}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                registerMethod === 'phone'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              手机注册
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRegisterMethod('email');
-                setError(null);
-              }}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                registerMethod === 'email'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              邮箱注册
-            </button>
+      {/* Content */}
+      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md animate-fadeIn">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <Link to="/" className="inline-block mb-6">
+              <img src="/img/logo.png" alt="PopGraph Studio" className="h-16 mx-auto" />
+            </Link>
+            <h2 className="text-[var(--primary)] mb-2">创建账户</h2>
+            <p className="text-[var(--text-muted)]">注册 PopGraph 开始创作</p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-2">
-              <svg className="w-5 h-5 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <p className="text-sm text-red-200">{error}</p>
-            </div>
-          )}
-
-          {/* Phone Register Form */}
-          {registerMethod === 'phone' && (
-            <form onSubmit={handlePhoneRegister} className="space-y-4">
-              {/* Phone Input */}
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-2">
-                  手机号
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                  placeholder="请输入手机号"
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50"
-                />
+          {/* Register Card */}
+          <div className="card">
+            <div className="card-body p-8">
+              {/* Tab Switcher */}
+              <div className="flex mb-6 p-1 bg-[var(--primary-bg)] rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegisterMethod('phone');
+                    setError(null);
+                  }}
+                  className={`flex-1 py-3 text-sm font-bold rounded-md transition-all ${
+                    registerMethod === 'phone'
+                      ? 'bg-[var(--primary)] text-white shadow-lg'
+                      : 'text-[var(--text-muted)] hover:text-[var(--primary)]'
+                  }`}
+                >
+                  手机注册
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegisterMethod('email');
+                    setError(null);
+                  }}
+                  className={`flex-1 py-3 text-sm font-bold rounded-md transition-all ${
+                    registerMethod === 'email'
+                      ? 'bg-[var(--primary)] text-white shadow-lg'
+                      : 'text-[var(--text-muted)] hover:text-[var(--primary)]'
+                  }`}
+                >
+                  邮箱注册
+                </button>
               </div>
 
-              {/* Verification Code Input */}
-              <div>
-                <label htmlFor="code" className="block text-sm font-medium text-gray-300 mb-2">
-                  验证码
-                </label>
-                <div className="flex gap-3">
-                  <input
-                    id="code"
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="请输入验证码"
-                    disabled={isSubmitting}
-                    className="flex-1 px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50"
-                  />
+              {/* Error Message */}
+              {error && (
+                <div className="alert alert-error flex items-start gap-3">
+                  <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
+
+              {/* Phone Register Form */}
+              {registerMethod === 'phone' && (
+                <form onSubmit={handlePhoneRegister} className="space-y-5">
+                  {/* Phone Input */}
+                  <div>
+                    <label htmlFor="phone" className="form-label">
+                      手机号
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                      placeholder="请输入手机号"
+                      disabled={isSubmitting}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* Verification Code Input */}
+                  <div>
+                    <label htmlFor="code" className="form-label">
+                      验证码
+                    </label>
+                    <div className="flex gap-3">
+                      <input
+                        id="code"
+                        type="text"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="请输入验证码"
+                        disabled={isSubmitting}
+                        className="form-input flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendCode}
+                        disabled={!isValidPhone(phone) || countdown > 0 || isSendingCode}
+                        className="btn-secondary whitespace-nowrap min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSendingCode ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+                          </span>
+                        ) : countdown > 0 ? (
+                          `${countdown}s`
+                        ) : (
+                          '获取验证码'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
                   <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={!isValidPhone(phone) || countdown > 0 || isSendingCode}
-                    className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors whitespace-nowrap min-w-[120px]"
+                    type="submit"
+                    disabled={!canSubmitPhone}
+                    className="btn-primary w-full flex items-center justify-center gap-2"
                   >
-                    {isSendingCode ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      </span>
-                    ) : countdown > 0 ? (
-                      `${countdown}s 后重发`
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>注册中...</span>
+                      </>
                     ) : (
-                      '获取验证码'
+                      '注册'
                     )}
                   </button>
-                </div>
+                </form>
+              )}
+
+              {/* Email Register Form */}
+              {registerMethod === 'email' && (
+                <form onSubmit={handleEmailRegister} className="space-y-5">
+                  {/* Email Input */}
+                  <div>
+                    <label htmlFor="email" className="form-label">
+                      邮箱
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="请输入邮箱"
+                      disabled={isSubmitting}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* Password Input */}
+                  <div>
+                    <label htmlFor="password" className="form-label">
+                      密码
+                    </label>
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="请输入密码（至少8位）"
+                      disabled={isSubmitting}
+                      className="form-input"
+                    />
+                  </div>
+
+                  {/* Confirm Password Input */}
+                  <div>
+                    <label htmlFor="confirmPassword" className="form-label">
+                      确认密码
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="请再次输入密码"
+                      disabled={isSubmitting}
+                      className={`form-input ${passwordError ? 'border-red-500' : ''}`}
+                    />
+                    {passwordError && (
+                      <p className="mt-2 text-sm text-red-500">{passwordError}</p>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={!canSubmitEmail}
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>注册中...</span>
+                      </>
+                    ) : (
+                      '注册'
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* Login Link */}
+              <div className="mt-6 text-center">
+                <p className="text-[var(--text-muted)] text-sm">
+                  已有账户？{' '}
+                  <Link to="/login" className="text-[var(--primary)] hover:text-[var(--primary-dark)] font-semibold transition-colors">
+                    立即登录
+                  </Link>
+                </p>
               </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={!canSubmitPhone}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/30 disabled:shadow-none flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>注册中...</span>
-                  </>
-                ) : (
-                  '注册'
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Email Register Form */}
-          {registerMethod === 'email' && (
-            <form onSubmit={handleEmailRegister} className="space-y-4">
-              {/* Email Input */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                  邮箱
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="请输入邮箱"
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50"
-                />
-              </div>
-
-              {/* Password Input */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                  密码
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码（至少8位）"
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50"
-                />
-              </div>
-
-              {/* Confirm Password Input */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                  确认密码
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="请再次输入密码"
-                  disabled={isSubmitting}
-                  className={`w-full px-4 py-3 bg-black/20 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50 ${
-                    passwordError ? 'border-red-500/50' : 'border-white/10'
-                  }`}
-                />
-                {passwordError && (
-                  <p className="mt-2 text-sm text-red-400">{passwordError}</p>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={!canSubmitEmail}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/30 disabled:shadow-none flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>注册中...</span>
-                  </>
-                ) : (
-                  '注册'
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
-              已有账户？{' '}
-              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-                立即登录
-              </Link>
-            </p>
+            </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <p className="text-center text-gray-500 text-xs mt-6">
-          注册即表示您同意我们的服务条款和隐私政策
-        </p>
+          {/* Footer */}
+          <p className="text-center text-[var(--text-muted)] text-xs mt-6">
+            注册即表示您同意我们的服务条款和隐私政策
+          </p>
+        </div>
       </div>
     </div>
   );

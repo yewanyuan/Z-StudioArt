@@ -82,56 +82,51 @@ export function AspectRatioSelector({
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider ml-1">{t.form.sizeLabel}</label>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <label className="block text-sm font-medium text-[var(--text-dark)]">{t.form.sizeLabel}</label>
+      <div className="grid grid-cols-4 gap-2">
         {ratioOptions.map((option) => (
           <button
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
             disabled={disabled}
-            className={`relative p-4 rounded-xl border transition-all duration-200 group ${
+            className={`relative p-3 rounded-lg border transition-all duration-200 group ${
               value === option.value
-                ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/50'
-                : 'border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 hover:-translate-y-1'
+                ? 'border-[var(--primary)] bg-[var(--primary-bg)] ring-1 ring-[var(--primary)]'
+                : 'border-[var(--border-light)] bg-white hover:border-[var(--primary)] hover:bg-[var(--primary-bg)]'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
             aria-pressed={value === option.value}
+            title={`${option.label} - ${option.description}`}
           >
             {/* Aspect Ratio Visual */}
-            <div className="flex justify-center mb-3">
+            <div className="flex justify-center mb-2">
               <div
                 className={`rounded flex items-center justify-center transition-colors ${
                   option.value === '1:1'
-                    ? 'w-8 h-8'
+                    ? 'w-6 h-6'
                     : option.value === '9:16'
-                    ? 'w-6 h-10'
+                    ? 'w-5 h-8'
                     : option.value === '16:9'
-                    ? 'w-10 h-6'
-                    : 'w-8 h-8'
+                    ? 'w-8 h-5'
+                    : 'w-6 h-6'
                 } ${
-                  value === option.value ? 'bg-indigo-500 text-white' : 'bg-white/10 text-gray-400 group-hover:bg-white/20 group-hover:text-gray-200'
+                  value === option.value ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border-light)] text-[var(--text-muted)]'
                 }`}
               >
-                <span className="text-sm">{option.icon}</span>
+                <span className="text-xs">{option.icon}</span>
               </div>
             </div>
 
             {/* Label */}
-            <p className={`text-xs font-semibold text-center transition-colors ${
-                value === option.value ? 'text-white' : 'text-gray-300 group-hover:text-white'
+            <p className={`text-xs font-medium text-center transition-colors truncate ${
+                value === option.value ? 'text-[var(--primary)]' : 'text-[var(--text-dark)]'
             }`}>
               {option.label}
             </p>
-            <p className="text-[10px] text-gray-500 text-center mt-0.5">
-                {option.description}
-            </p>
-            {option.value !== 'custom' && (
-              <p className="text-[9px] text-gray-600 text-center mt-1 font-mono opacity-60">{option.dimensions}</p>
-            )}
 
             {/* Selected Indicator */}
             {value === option.value && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm border border-white/20">
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--primary)] rounded-full flex items-center justify-center shadow-sm">
                 <svg
                   className="w-2.5 h-2.5 text-white"
                   fill="none"
@@ -151,37 +146,50 @@ export function AspectRatioSelector({
         ))}
       </div>
 
+      {/* Dimensions Display */}
+      {value !== 'custom' && (
+        <p className="text-xs text-[var(--text-muted)] text-center">
+          {ratioOptions.find(o => o.value === value)?.dimensions} · {ratioOptions.find(o => o.value === value)?.description}
+        </p>
+      )}
+
       {/* Custom Dimensions Inputs */}
       {value === 'custom' && (
-        <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 border border-white/10 rounded-xl animate-in fade-in slide-in-from-top-2">
+        <div className="grid grid-cols-2 gap-3 p-3 bg-[var(--primary-bg)] border border-[var(--border-light)] rounded-lg">
           <div className="space-y-1">
-            <label className="block text-[10px] font-medium text-gray-400 uppercase">{t.form.width} ({t.form.pixels})</label>
-            <input
-              type="number"
-              value={customWidth}
-              onChange={handleWidthChange}
-              min={256}
-              max={2048}
-              step={8}
-              disabled={disabled}
-              className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-            />
+            <label className="block text-xs text-[var(--text-muted)]">{t.form.width}</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={customWidth}
+                onChange={handleWidthChange}
+                min={256}
+                max={2048}
+                step={8}
+                disabled={disabled}
+                className="w-full px-3 py-2 bg-white border border-[var(--border-light)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-all"
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">px</span>
+            </div>
           </div>
           <div className="space-y-1">
-            <label className="block text-[10px] font-medium text-gray-400 uppercase">{t.form.height} ({t.form.pixels})</label>
-            <input
-              type="number"
-              value={customHeight}
-              onChange={handleHeightChange}
-              min={256}
-              max={2048}
-              step={8}
-              disabled={disabled}
-              className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-            />
+            <label className="block text-xs text-[var(--text-muted)]">{t.form.height}</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={customHeight}
+                onChange={handleHeightChange}
+                min={256}
+                max={2048}
+                step={8}
+                disabled={disabled}
+                className="w-full px-3 py-2 bg-white border border-[var(--border-light)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-all"
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">px</span>
+            </div>
           </div>
-          <p className="col-span-2 text-[10px] text-gray-500 text-center">
-            Range: 256 - 2048 px. Sizes must be multiples of 8.
+          <p className="col-span-2 text-xs text-[var(--text-muted)] text-center">
+            {language === 'zh' ? '范围: 256-2048 像素，8的倍数' : 'Range: 256-2048 px, multiples of 8'}
           </p>
         </div>
       )}

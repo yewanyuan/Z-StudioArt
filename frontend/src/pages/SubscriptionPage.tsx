@@ -1,258 +1,275 @@
 /**
  * 订阅页面
+ * Based on Mathilda Art Gallery Template - About/Skills Style
  * Requirements: 4.1, 4.8
- * 
- * 功能：
- * - 显示订阅计划列表
- * - 显示当前会员状态
- * - 选择计划并发起支付
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
+import { useLanguageStore } from '../stores/languageStore';
 import type { PlanResponse } from '../types';
 import { PaymentModal } from '../components';
+import { Header, Footer } from '../components/layout';
+
+// Translations
+const SUBSCRIPTION_TRANSLATIONS = {
+  zh: {
+    pageTitle: '订阅计划',
+    pageSubtitle: '选择适合您的计划，解锁更多创作能力',
+    loginPrompt: '登录后可查看当前会员状态并订阅计划',
+    loginNow: '立即登录',
+    loadingPlans: '加载订阅计划...',
+    choosePlan: '选择订阅计划',
+    currentPlan: '当前计划',
+    selectPlan: '选择此计划',
+    loginToSubscribe: '登录订阅',
+    mostPopular: '最受欢迎',
+    perYear: '年',
+    perMonth: '月',
+    validFor: '有效期',
+    days: '天',
+    memberStatus: '当前会员状态',
+    expired: '已过期',
+    expiryDate: '有效期至',
+    expiredDate: '过期时间',
+    upgradePrompt: '升级会员享受更多权益',
+    featureComparison: '功能对比',
+    tierNames: {
+      professional: '专业版',
+      basic: '基础版',
+      free: '免费版',
+    },
+    planNames: {
+      basic_monthly: '基础版月度',
+      basic_yearly: '基础版年度',
+      pro_monthly: '专业版月度',
+      pro_yearly: '专业版年度',
+    },
+    planDescriptions: {
+      basic_monthly: '适合个人用户，按月订阅更灵活',
+      basic_yearly: '适合个人用户，年度订阅更优惠',
+      pro_monthly: '适合专业创作者，解锁全部功能',
+      pro_yearly: '适合专业创作者，年度订阅享最大优惠',
+    },
+    features: [
+      { name: '每日生成次数', free: '5 次', basic: '50 次', pro: '无限制' },
+      { name: '图片分辨率', free: '标准', basic: '高清', pro: '超高清' },
+      { name: '水印', free: '有', basic: '无', pro: '无' },
+      { name: '历史记录保留', free: '7 天', basic: '90 天', pro: '90 天' },
+      { name: '批量生成', free: '1 张', basic: '4 张', pro: '4 张' },
+      { name: '优先处理', free: '否', basic: '否', pro: '是' },
+      { name: '专属模板', free: '否', basic: '部分', pro: '全部' },
+    ],
+    featureTableHeaders: { feature: '功能', free: '免费版', basic: '基础版', pro: '专业版' },
+  },
+  en: {
+    pageTitle: 'Subscription Plans',
+    pageSubtitle: 'Choose the right plan for you and unlock more creative capabilities',
+    loginPrompt: 'Log in to view your membership status and subscribe to plans',
+    loginNow: 'Log In',
+    loadingPlans: 'Loading subscription plans...',
+    choosePlan: 'Choose a Plan',
+    currentPlan: 'Current Plan',
+    selectPlan: 'Select Plan',
+    loginToSubscribe: 'Log in to Subscribe',
+    mostPopular: 'Most Popular',
+    perYear: 'year',
+    perMonth: 'month',
+    validFor: 'Valid for',
+    days: 'days',
+    memberStatus: 'Current Membership Status',
+    expired: 'Expired',
+    expiryDate: 'Valid until',
+    expiredDate: 'Expired on',
+    upgradePrompt: 'Upgrade to enjoy more benefits',
+    featureComparison: 'Feature Comparison',
+    tierNames: {
+      professional: 'Professional',
+      basic: 'Basic',
+      free: 'Free',
+    },
+    planNames: {
+      basic_monthly: 'Basic Monthly',
+      basic_yearly: 'Basic Yearly',
+      pro_monthly: 'Professional Monthly',
+      pro_yearly: 'Professional Yearly',
+    },
+    planDescriptions: {
+      basic_monthly: 'Perfect for individuals, flexible monthly subscription',
+      basic_yearly: 'Perfect for individuals, save more with yearly subscription',
+      pro_monthly: 'For professional creators, unlock all features',
+      pro_yearly: 'For professional creators, best value with yearly subscription',
+    },
+    features: [
+      { name: 'Daily generations', free: '5', basic: '50', pro: 'Unlimited' },
+      { name: 'Image resolution', free: 'Standard', basic: 'HD', pro: 'Ultra HD' },
+      { name: 'Watermark', free: 'Yes', basic: 'No', pro: 'No' },
+      { name: 'History retention', free: '7 days', basic: '90 days', pro: '90 days' },
+      { name: 'Batch generation', free: '1 image', basic: '4 images', pro: '4 images' },
+      { name: 'Priority processing', free: 'No', basic: 'No', pro: 'Yes' },
+      { name: 'Exclusive templates', free: 'No', basic: 'Partial', pro: 'All' },
+    ],
+    featureTableHeaders: { feature: 'Feature', free: 'Free', basic: 'Basic', pro: 'Professional' },
+  },
+};
 
 export function SubscriptionPage() {
-  const navigate = useNavigate();
-  const { user, clearAuth, refreshToken, updateUser } = useAuthStore();
-  
-  // 计划列表状态
+  const { user, isAuthenticated, updateUser } = useAuthStore();
+  const { language } = useLanguageStore();
+  const t = SUBSCRIPTION_TRANSLATIONS[language];
+
   const [plans, setPlans] = useState<PlanResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // 支付模态框状态
   const [selectedPlan, setSelectedPlan] = useState<PlanResponse | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  /**
-   * 加载订阅计划
-   */
   useEffect(() => {
     const loadPlans = async () => {
       setIsLoading(true);
       setError(null);
-      
       try {
         const response = await apiService.getPlans();
         setPlans(response.plans);
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : '加载订阅计划失败';
+        const errorMessage = err instanceof Error ? err.message : (language === 'zh' ? '加载订阅计划失败' : 'Failed to load subscription plans');
         setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
     };
-    
     loadPlans();
-  }, []);
+  }, [language]);
 
-  /**
-   * 选择计划
-   */
   const handleSelectPlan = (plan: PlanResponse) => {
+    if (!isAuthenticated) return;
     setSelectedPlan(plan);
     setIsPaymentModalOpen(true);
   };
 
-  /**
-   * 关闭支付模态框
-   */
   const handleClosePaymentModal = () => {
     setIsPaymentModalOpen(false);
     setSelectedPlan(null);
   };
 
-  /**
-   * 支付成功回调
-   */
   const handlePaymentSuccess = async () => {
-    // 刷新用户信息
     try {
       const userInfo = await apiService.getCurrentUser();
       updateUser(userInfo);
     } catch (err) {
       console.error('Failed to refresh user info:', err);
     }
-    
     handleClosePaymentModal();
   };
 
-  /**
-   * 登出
-   */
-  const handleLogout = async () => {
-    try {
-      if (refreshToken) {
-        await apiService.logout(refreshToken);
-      }
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      clearAuth();
-      navigate('/login');
-    }
-  };
-
-  /**
-   * 格式化会员过期时间
-   */
   const formatExpiryDate = (dateStr?: string) => {
-    if (!dateStr) return '无';
+    if (!dateStr) return language === 'zh' ? '无' : 'None';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
 
-  /**
-   * 获取会员等级显示名称
-   */
   const getTierDisplayName = (tier: string) => {
     switch (tier) {
-      case 'professional':
-        return '专业版';
-      case 'basic':
-        return '基础版';
-      default:
-        return '免费版';
+      case 'professional': return t.tierNames.professional;
+      case 'basic': return t.tierNames.basic;
+      default: return t.tierNames.free;
     }
   };
 
-  /**
-   * 获取会员等级样式
-   */
-  const getTierStyle = (tier: string) => {
-    switch (tier) {
-      case 'professional':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-      case 'basic':
-        return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-    }
-  };
-
-  /**
-   * 检查计划是否为当前计划
-   */
   const isCurrentPlan = (plan: PlanResponse) => {
     if (!user) return false;
     return user.membership_tier === plan.tier;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
-      {/* 顶部导航栏 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-sm border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* 左侧：返回和标题 */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="p-2 text-gray-400 hover:text-white transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h1 className="text-xl font-semibold text-white">会员订阅</h1>
-            </div>
+    <div className="page-wrapper">
+      <div className="bg-curve" />
+      <Header />
 
-            {/* 右侧：用户信息 */}
-            {user && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-300">
-                  {user.phone || user.email}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${getTierStyle(user.membership_tier)}`}>
-                  {getTierDisplayName(user.membership_tier)}
-                </span>
-                <button
-                  onClick={() => navigate('/history')}
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                  title="生成历史"
-                >
-                  📜
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-gray-400 hover:text-white transition-colors"
-                  title="退出登录"
-                >
-                  退出
-                </button>
-              </div>
-            )}
+      <section className="py-8 border-b border-[var(--border-light)]">
+        <div className="container-main">
+          <div className="text-center">
+            <h2 className="section-title">{t.pageTitle}</h2>
+            <p className="text-[var(--text-muted)] max-w-2xl mx-auto">{t.pageSubtitle}</p>
           </div>
         </div>
-      </header>
+      </section>
 
-      {/* 主内容区 */}
-      <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        {/* 当前会员状态卡片 */}
-        {user && (
-          <MembershipStatusCard
-            user={user}
-            getTierDisplayName={getTierDisplayName}
-            getTierStyle={getTierStyle}
-            formatExpiryDate={formatExpiryDate}
-          />
-        )}
+      <main className="main-content">
+        <div className="container-main">
+          {isAuthenticated && user && (
+            <MembershipStatusCard
+              user={user}
+              getTierDisplayName={getTierDisplayName}
+              formatExpiryDate={formatExpiryDate}
+              t={t}
+            />
+          )}
 
-        {/* 错误提示 */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
-            {error}
-            <button
-              onClick={() => setError(null)}
-              className="ml-4 text-red-300 hover:text-red-200"
-            >
-              关闭
-            </button>
-          </div>
-        )}
-
-        {/* 加载状态 */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500/30 border-t-indigo-500" />
-              <span className="text-gray-400">加载订阅计划...</span>
+          {!isAuthenticated && (
+            <div className="card mb-8 bg-[var(--primary-bg)]">
+              <div className="card-body text-center">
+                <p className="text-[var(--text-muted)] mb-4">{t.loginPrompt}</p>
+                <Link to="/login" className="btn-primary">{t.loginNow}</Link>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 订阅计划列表 */}
-        {!isLoading && plans.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-lg font-medium text-white mb-6">选择订阅计划</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {plans.map((plan) => (
-                <PlanCard
-                  key={plan.plan}
-                  plan={plan}
-                  isCurrentPlan={isCurrentPlan(plan)}
-                  onSelect={() => handleSelectPlan(plan)}
-                />
-              ))}
+          {error && (
+            <div className="alert alert-error flex items-start gap-3 mb-6">
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-sm flex-1">{error}</p>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 功能对比表 */}
-        {!isLoading && plans.length > 0 && (
-          <FeatureComparisonTable />
-        )}
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <div className="loader-spinner" />
+                <span className="text-[var(--text-muted)]">{t.loadingPlans}</span>
+              </div>
+            </div>
+          )}
+
+          {!isLoading && plans.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-xl font-bold text-[var(--text-dark)] mb-6 text-center">{t.choosePlan}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+                {plans.map((plan) => (
+                  <PlanCard
+                    key={plan.plan}
+                    plan={plan}
+                    isCurrentPlan={isCurrentPlan(plan)}
+                    isAuthenticated={isAuthenticated}
+                    onSelect={() => handleSelectPlan(plan)}
+                    t={t}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isLoading && plans.length > 0 && (
+            <FeatureComparisonTable t={t} />
+          )}
+        </div>
       </main>
 
-      {/* 支付模态框 */}
+      <Footer />
+
       {selectedPlan && (
         <PaymentModal
           isOpen={isPaymentModalOpen}
@@ -265,187 +282,153 @@ export function SubscriptionPage() {
   );
 }
 
-
-/**
- * 会员状态卡片组件
- */
 interface MembershipStatusCardProps {
-  user: {
-    membership_tier: string;
-    membership_expiry?: string;
-  };
+  user: { membership_tier: string; membership_expiry?: string };
   getTierDisplayName: (tier: string) => string;
-  getTierStyle: (tier: string) => string;
   formatExpiryDate: (date?: string) => string;
+  t: typeof SUBSCRIPTION_TRANSLATIONS.zh;
 }
 
-function MembershipStatusCard({ 
-  user, 
-  getTierDisplayName, 
-  getTierStyle, 
-  formatExpiryDate 
-}: MembershipStatusCardProps) {
-  const isExpired = user.membership_expiry 
-    ? new Date(user.membership_expiry) < new Date() 
-    : false;
+function MembershipStatusCard({ user, getTierDisplayName, formatExpiryDate, t }: MembershipStatusCardProps) {
+  const isExpired = user.membership_expiry ? new Date(user.membership_expiry) < new Date() : false;
+  const getTierIcon = (tier: string) => {
+    switch (tier) {
+      case 'professional': return '👑';
+      case 'basic': return '⭐';
+      default: return '👤';
+    }
+  };
 
   return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6">
-      <h2 className="text-lg font-medium text-white mb-4">当前会员状态</h2>
-      <div className="flex items-center gap-4">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-          user.membership_tier === 'professional' 
-            ? 'bg-purple-500/20' 
-            : user.membership_tier === 'basic'
-            ? 'bg-blue-500/20'
-            : 'bg-gray-500/20'
-        }`}>
-          {user.membership_tier === 'professional' ? (
-            <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
-          ) : user.membership_tier === 'basic' ? (
-            <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
-          ) : (
-            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          )}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`text-sm px-2 py-0.5 rounded-full border ${getTierStyle(user.membership_tier)}`}>
-              {getTierDisplayName(user.membership_tier)}
-            </span>
-            {isExpired && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
-                已过期
+    <div className="card mb-8">
+      <div className="card-body">
+        <h4 className="text-[var(--text-dark)] mb-4">{t.memberStatus}</h4>
+        <div className="flex items-center gap-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl ${
+            user.membership_tier === 'professional' ? 'bg-purple-100' :
+            user.membership_tier === 'basic' ? 'bg-blue-100' : 'bg-[var(--primary-bg)]'
+          }`}>
+            {getTierIcon(user.membership_tier)}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm px-3 py-1 rounded-full font-medium ${
+                user.membership_tier === 'professional' ? 'bg-purple-100 text-purple-700' :
+                user.membership_tier === 'basic' ? 'bg-blue-100 text-blue-700' :
+                'bg-[var(--primary-bg)] text-[var(--primary)]'
+              }`}>
+                {getTierDisplayName(user.membership_tier)}
               </span>
+              {isExpired && (
+                <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-600">{t.expired}</span>
+              )}
+            </div>
+            {user.membership_tier !== 'free' && (
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                {isExpired ? t.expiredDate : t.expiryDate}：{formatExpiryDate(user.membership_expiry)}
+              </p>
+            )}
+            {user.membership_tier === 'free' && (
+              <p className="mt-2 text-sm text-[var(--text-muted)]">{t.upgradePrompt}</p>
             )}
           </div>
-          {user.membership_tier !== 'free' && (
-            <p className="mt-2 text-sm text-gray-400">
-              {isExpired ? '过期时间' : '有效期至'}：{formatExpiryDate(user.membership_expiry)}
-            </p>
-          )}
-          {user.membership_tier === 'free' && (
-            <p className="mt-2 text-sm text-gray-400">
-              升级会员享受更多权益
-            </p>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
-/**
- * 计划卡片组件
- */
 interface PlanCardProps {
   plan: PlanResponse;
   isCurrentPlan: boolean;
+  isAuthenticated: boolean;
   onSelect: () => void;
+  t: typeof SUBSCRIPTION_TRANSLATIONS.zh;
 }
 
-function PlanCard({ plan, isCurrentPlan, onSelect }: PlanCardProps) {
+function PlanCard({ plan, isCurrentPlan, isAuthenticated, onSelect, t }: PlanCardProps) {
   const isYearly = plan.plan.includes('yearly');
   const isPro = plan.tier === 'professional';
-  
+
+  // Get translated plan name and description
+  const planKey = plan.plan.replace('pro_', 'pro_') as keyof typeof t.planNames;
+  const planName = t.planNames[planKey] || plan.name;
+  const planDescription = t.planDescriptions[planKey] || plan.description;
+
   return (
-    <div className={`relative bg-gray-800/50 rounded-xl border ${
-      isPro 
-        ? 'border-purple-500/50' 
-        : 'border-gray-700'
-    } p-6 flex flex-col`}>
-      {/* 推荐标签 */}
+    <div className={`card relative flex flex-col h-full overflow-visible ${isPro ? 'ring-2 ring-[var(--primary)]' : ''}`}>
       {isPro && isYearly && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="px-3 py-1 bg-purple-500 text-white text-xs font-medium rounded-full">
-            最受欢迎
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+          <span className="px-3 py-1 bg-[var(--primary)] text-white text-xs font-bold rounded-full shadow-lg whitespace-nowrap">
+            {t.mostPopular}
           </span>
         </div>
       )}
-      
-      {/* 计划名称 */}
-      <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-      
-      {/* 价格 */}
-      <div className="mt-4">
-        <span className="text-3xl font-bold text-white">{plan.price_display}</span>
-        <span className="text-gray-400 ml-1">
-          /{isYearly ? '年' : '月'}
-        </span>
+      <div className="card-body flex flex-col h-full">
+        <h4 className="text-[var(--text-dark)]">{planName}</h4>
+        <div className="mt-4">
+          <span className="text-3xl font-bold text-[var(--primary)]">{plan.price_display}</span>
+          <span className="text-[var(--text-muted)] ml-1">/{isYearly ? t.perYear : t.perMonth}</span>
+        </div>
+        <p className="mt-3 text-sm text-[var(--text-muted)] flex-grow">{planDescription}</p>
+        <p className="mt-2 text-xs text-[var(--text-muted)]">{t.validFor}: {plan.duration_days} {t.days}</p>
+        {isAuthenticated ? (
+          <button
+            onClick={onSelect}
+            disabled={isCurrentPlan}
+            className={`mt-6 w-full py-3 rounded-lg font-bold transition-all ${
+              isCurrentPlan ? 'bg-[var(--border-light)] text-[var(--text-muted)] cursor-not-allowed' :
+              isPro ? 'btn-primary' : 'btn-secondary'
+            }`}
+          >
+            {isCurrentPlan ? t.currentPlan : t.selectPlan}
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            className={`mt-6 block w-full py-3 rounded-lg font-bold text-center transition-all ${
+              isPro ? 'btn-primary' : 'btn-secondary'
+            }`}
+          >
+            {t.loginToSubscribe}
+          </Link>
+        )}
       </div>
-      
-      {/* 描述 */}
-      <p className="mt-3 text-sm text-gray-400 flex-grow">
-        {plan.description}
-      </p>
-      
-      {/* 时长 */}
-      <p className="mt-2 text-xs text-gray-500">
-        有效期：{plan.duration_days} 天
-      </p>
-      
-      {/* 按钮 */}
-      <button
-        onClick={onSelect}
-        disabled={isCurrentPlan}
-        className={`mt-6 w-full py-3 rounded-lg font-medium transition-colors ${
-          isCurrentPlan
-            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-            : isPro
-            ? 'bg-purple-600 hover:bg-purple-700 text-white'
-            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-        }`}
-      >
-        {isCurrentPlan ? '当前计划' : '选择此计划'}
-      </button>
     </div>
   );
 }
 
-/**
- * 功能对比表组件
- */
-function FeatureComparisonTable() {
-  const features = [
-    { name: '每日生成次数', free: '5 次', basic: '50 次', pro: '无限制' },
-    { name: '图片分辨率', free: '标准', basic: '高清', pro: '超高清' },
-    { name: '水印', free: '有', basic: '无', pro: '无' },
-    { name: '历史记录保留', free: '7 天', basic: '90 天', pro: '90 天' },
-    { name: '批量生成', free: '1 张', basic: '4 张', pro: '4 张' },
-    { name: '优先处理', free: '否', basic: '否', pro: '是' },
-    { name: '专属模板', free: '否', basic: '部分', pro: '全部' },
-  ];
+interface FeatureComparisonTableProps {
+  t: typeof SUBSCRIPTION_TRANSLATIONS.zh;
+}
 
+function FeatureComparisonTable({ t }: FeatureComparisonTableProps) {
   return (
-    <div className="mt-12">
-      <h2 className="text-lg font-medium text-white mb-6">功能对比</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-4 px-4 text-left text-sm font-medium text-gray-400">功能</th>
-              <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">免费版</th>
-              <th className="py-4 px-4 text-center text-sm font-medium text-blue-400">基础版</th>
-              <th className="py-4 px-4 text-center text-sm font-medium text-purple-400">专业版</th>
-            </tr>
-          </thead>
-          <tbody>
-            {features.map((feature, index) => (
-              <tr key={index} className="border-b border-gray-700/50">
-                <td className="py-4 px-4 text-sm text-gray-300">{feature.name}</td>
-                <td className="py-4 px-4 text-center text-sm text-gray-400">{feature.free}</td>
-                <td className="py-4 px-4 text-center text-sm text-gray-300">{feature.basic}</td>
-                <td className="py-4 px-4 text-center text-sm text-gray-300">{feature.pro}</td>
+    <div className="mt-16">
+      <h3 className="text-xl font-bold text-[var(--text-dark)] mb-6 text-center">{t.featureComparison}</h3>
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[var(--primary-bg)]">
+                <th className="py-4 px-6 text-left text-sm font-bold text-[var(--text-dark)]">{t.featureTableHeaders.feature}</th>
+                <th className="py-4 px-6 text-center text-sm font-bold text-[var(--text-muted)]">{t.featureTableHeaders.free}</th>
+                <th className="py-4 px-6 text-center text-sm font-bold text-blue-600">{t.featureTableHeaders.basic}</th>
+                <th className="py-4 px-6 text-center text-sm font-bold text-[var(--primary)]">{t.featureTableHeaders.pro}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {t.features.map((feature, index) => (
+                <tr key={index} className="border-b border-[var(--border-light)]">
+                  <td className="py-4 px-6 text-sm text-[var(--text-dark)]">{feature.name}</td>
+                  <td className="py-4 px-6 text-center text-sm text-[var(--text-muted)]">{feature.free}</td>
+                  <td className="py-4 px-6 text-center text-sm text-[var(--text-dark)]">{feature.basic}</td>
+                  <td className="py-4 px-6 text-center text-sm font-medium text-[var(--primary)]">{feature.pro}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

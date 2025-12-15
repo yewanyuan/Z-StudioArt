@@ -102,7 +102,7 @@ export const TRANSLATIONS = {
       portrait: '竖版',
       landscape: '横版',
       social: '朋友圈/帖子',
-      story: '手机海报/Story',
+      story: '手机海报/动态',
       video: '视频封面/网页',
       custom: '自定义',
       customDesc: '手动设置尺寸',
