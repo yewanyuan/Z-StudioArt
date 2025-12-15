@@ -13,6 +13,6 @@
 # Note: Requires backend to enable CORS for the Netlify site domain.
 [[redirects]]
   from = "/api/*"
-  to = "https://api.popgraph.com/api/:splat"
+  to = "https://api.orbit-3.cloud/:splat"
   status = 200
   force = true
