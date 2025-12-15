@@ -41,8 +41,8 @@ def upgrade() -> None:
     """))
     
     # Step 2: 为 users 表添加触发器
+    conn.execute(sa.text("DROP TRIGGER IF EXISTS update_users_updated_at ON users"))
     conn.execute(sa.text("""
-        DROP TRIGGER IF EXISTS update_users_updated_at ON users;
         CREATE TRIGGER update_users_updated_at
             BEFORE UPDATE ON users
             FOR EACH ROW
@@ -50,8 +50,8 @@ def upgrade() -> None:
     """))
     
     # Step 3: 为 templates 表添加触发器
+    conn.execute(sa.text("DROP TRIGGER IF EXISTS update_templates_updated_at ON templates"))
     conn.execute(sa.text("""
-        DROP TRIGGER IF EXISTS update_templates_updated_at ON templates;
         CREATE TRIGGER update_templates_updated_at
             BEFORE UPDATE ON templates
             FOR EACH ROW
@@ -59,8 +59,8 @@ def upgrade() -> None:
     """))
     
     # Step 4: 为 payment_orders 表添加触发器
+    conn.execute(sa.text("DROP TRIGGER IF EXISTS update_payment_orders_updated_at ON payment_orders"))
     conn.execute(sa.text("""
-        DROP TRIGGER IF EXISTS update_payment_orders_updated_at ON payment_orders;
         CREATE TRIGGER update_payment_orders_updated_at
             BEFORE UPDATE ON payment_orders
             FOR EACH ROW
