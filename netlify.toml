@@ -3,12 +3,6 @@
   publish = "dist"
   command = "npm ci --include=dev && npm run build"
 
-# SPA fallback (React Router)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Proxy API calls to backend domain
 # Note: Requires backend to enable CORS for the Netlify site domain.
 [[redirects]]
@@ -16,3 +10,9 @@
   to = "https://api.orbit-3.cloud/:splat"
   status = 200
   force = true
+
+# SPA fallback (React Router)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
