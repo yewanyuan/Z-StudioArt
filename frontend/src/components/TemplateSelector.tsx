@@ -16,9 +16,58 @@ interface TemplateSelectorProps {
 }
 
 const CATEGORY_COLORS: Record<TemplateCategory, string> = {
-  promotional: 'bg-red-600',
-  premium: 'bg-amber-600',
-  holiday: 'bg-pink-600',
+  promotional: 'bg-red-500',
+  premium: 'bg-amber-500',
+  holiday: 'bg-pink-500',
+};
+
+const CATEGORY_ICONS: Record<TemplateCategory, string> = {
+  promotional: '🏷️',
+  premium: '✨',
+  holiday: '🎉',
+};
+
+// Template translations - maps template IDs to translated names and descriptions
+const TEMPLATE_TRANSLATIONS: Record<string, { zh: { name: string; description: string }; en: { name: string; description: string } }> = {
+  // Promotional templates
+  'promo-sale-01': {
+    zh: { name: '限时特惠', description: '红色醒目配色，适合促销活动' },
+    en: { name: 'Flash Sale', description: 'Eye-catching red colors, perfect for promotions' },
+  },
+  'promo-flash-02': {
+    zh: { name: '闪购秒杀', description: '红橙渐变配色，营造紧迫感' },
+    en: { name: 'Flash Deal', description: 'Red-orange gradient, creates urgency' },
+  },
+  'promo-discount-03': {
+    zh: { name: '满减优惠', description: '红金配色，突出优惠信息' },
+    en: { name: 'Discount Deal', description: 'Red and gold colors, highlights discounts' },
+  },
+  // Premium templates
+  'premium-minimal-01': {
+    zh: { name: '极简奢华', description: '黑金配色，大量留白' },
+    en: { name: 'Minimal Luxury', description: 'Black and gold with white space' },
+  },
+  'premium-studio-02': {
+    zh: { name: '影棚质感', description: '专业灯光效果，高端质感' },
+    en: { name: 'Studio Quality', description: 'Professional lighting, premium feel' },
+  },
+  'premium-blackgold-03': {
+    zh: { name: '黑金尊享', description: '哑光黑金配色，VIP专属感' },
+    en: { name: 'Black Gold VIP', description: 'Matte black with gold accents' },
+  },
+  // Holiday templates
+  'holiday-spring-01': {
+    zh: { name: '春节喜庆', description: '红金喜庆配色，传统节日风格' },
+    en: { name: 'Spring Festival', description: 'Red and gold festive colors' },
+  },
+  'holiday-valentines-02': {
+    zh: { name: '情人节浪漫', description: '粉红浪漫配色，爱情主题' },
+    en: { name: 'Valentine\'s Day', description: 'Romantic pink and red theme' },
+  },
+  'holiday-double11-03': {
+    zh: { name: '双十一狂欢', description: '红橙霓虹配色，购物狂欢' },
+    en: { name: 'Double 11 Sale', description: 'Vibrant red-orange, shopping festival' },
+  },
 };
 
 export function TemplateSelector({
@@ -45,32 +94,50 @@ export function TemplateSelector({
       const data = await apiService.getTemplates();
       setTemplates(data);
     } catch (err) {
-      setError('加载模板失败，请稍后重试'); // This error message comes from API, maybe we can translate it too but usually API errors are dynamic. For now leaving as is or generic.
+      setError(language === 'zh' ? '加载模板失败，请稍后重试' : 'Failed to load templates');
       console.error('Failed to load templates:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Get translated template name
+  const getTemplateName = (template: Template): string => {
+    const translation = TEMPLATE_TRANSLATIONS[template.id];
+    if (translation) {
+      return translation[language].name;
+    }
+    return template.name;
+  };
+
+  // Get translated template description
+  const getTemplateDescription = (template: Template): string => {
+    const translation = TEMPLATE_TRANSLATIONS[template.id];
+    if (translation) {
+      return translation[language].description;
+    }
+    return template.prompt_modifiers.color_scheme;
+  };
+
   const filteredTemplates =
     activeCategory === 'all'
       ? templates
-      : templates.filter((t) => t.category === activeCategory);
+      : templates.filter((tmpl) => tmpl.category === activeCategory);
 
   const categories: (TemplateCategory | 'all')[] = ['all', 'promotional', 'premium', 'holiday'];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider ml-1">
-          {t.form.templateLabel} <span className="text-gray-500 font-normal normal-case">{t.form.templateOptional}</span>
+        <label className="block text-sm font-medium text-[var(--text-dark)]">
+          {t.form.templateLabel} <span className="text-[var(--text-muted)] font-normal">{t.form.templateOptional}</span>
         </label>
         {selectedTemplateId && (
           <button
             type="button"
             onClick={() => onSelect(undefined)}
             disabled={disabled}
-            className="text-xs text-indigo-300 hover:text-indigo-200 disabled:opacity-50 transition-colors"
+            className="text-xs text-[var(--primary)] hover:text-[var(--primary-dark)] disabled:opacity-50 transition-colors"
           >
             {t.form.clearTemplate}
           </button>
@@ -78,17 +145,17 @@ export function TemplateSelector({
       </div>
 
       {/* Category Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 flex-wrap">
         {categories.map((category) => (
           <button
             key={category}
             type="button"
             onClick={() => setActiveCategory(category)}
             disabled={disabled}
-            className={`px-4 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-all duration-200 border ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 ${
               activeCategory === category
-                ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-black/20 border-white/10 text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                ? 'bg-[var(--primary)] text-white'
+                : 'bg-[var(--primary-bg)] text-[var(--text-muted)] hover:text-[var(--primary)]'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {t.categories[category]}
@@ -98,81 +165,84 @@ export function TemplateSelector({
 
       {/* Template Grid */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-40">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent" />
+        <div className="flex items-center justify-center h-32">
+          <div className="loader-spinner w-8 h-8" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+        <div className="flex flex-col items-center justify-center h-32 text-[var(--text-muted)]">
           <p className="text-sm">{error}</p>
           <button
             type="button"
             onClick={loadTemplates}
-            className="mt-2 text-xs text-indigo-400 hover:text-indigo-300"
+            className="mt-2 text-xs text-[var(--primary)] hover:underline"
           >
             {t.form.retry}
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {filteredTemplates.map((template) => (
-            <button
-              key={template.id}
-              type="button"
-              onClick={() => onSelect(template.id)}
-              disabled={disabled}
-              className={`relative group p-3 rounded-xl border transition-all duration-300 text-left ${
-                selectedTemplateId === template.id
-                  ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.3)]'
-                  : 'border-white/10 bg-black/20 hover:bg-white/5 hover:border-white/20 hover:-translate-y-1'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {/* Category Badge */}
-              <span
-                className={`absolute top-2 right-2 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-white rounded shadow-sm z-10 ${
-                  CATEGORY_COLORS[template.category]
-                }`}
+        <div className="template-scroll-container">
+          <div className="grid grid-cols-2 gap-4 pt-3 pb-1">
+            {filteredTemplates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => onSelect(template.id)}
+                disabled={disabled}
+                className={`relative group rounded-lg border transition-all duration-200 text-left overflow-visible ${
+                  selectedTemplateId === template.id
+                    ? 'border-[var(--primary)] bg-[var(--primary-bg)] ring-1 ring-[var(--primary)]'
+                    : 'border-[var(--border-light)] bg-white hover:border-[var(--primary)] hover:bg-[var(--primary-bg)]'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={getTemplateDescription(template)}
               >
-                {t.categories[template.category]}
-              </span>
+                {/* Category Badge - positioned outside */}
+                <span
+                  className={`absolute -top-2.5 right-3 px-2 py-0.5 text-[10px] font-medium text-white rounded-full z-10 shadow-sm ${
+                    CATEGORY_COLORS[template.category]
+                  }`}
+                >
+                  {t.categories[template.category]}
+                </span>
 
-              {/* Template Preview Placeholder */}
-              <div className="w-full h-20 rounded-lg mb-3 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800 group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                    {template.category === 'promotional' && '🏷️'}
-                    {template.category === 'premium' && '✨'}
-                    {template.category === 'holiday' && '🎉'}
-                  </span>
+                {/* Card Content - consistent padding */}
+                <div className="p-3">
+                  {/* Template Preview with Icon */}
+                  <div className="w-full h-14 rounded-md mb-2 overflow-hidden relative bg-gradient-to-br from-[var(--primary-bg)] to-[var(--border-light)]">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl">
+                        {CATEGORY_ICONS[template.category]}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Template Name */}
+                  <p className="text-sm font-medium text-[var(--text-dark)] truncate">{getTemplateName(template)}</p>
+                  <p className="text-xs text-[var(--text-muted)] line-clamp-2 mt-1 leading-relaxed h-8">
+                    {getTemplateDescription(template)}
+                  </p>
                 </div>
-              </div>
 
-              {/* Template Name */}
-              <p className="text-sm font-semibold text-gray-200 truncate group-hover:text-white transition-colors">{template.name}</p>
-              <p className="text-xs text-gray-500 truncate mt-0.5">
-                {template.prompt_modifiers.color_scheme}
-              </p>
-
-              {/* Selected Indicator */}
-              {selectedTemplateId === template.id && (
-                <div className="absolute -top-1 -left-1 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg border border-white/20">
-                  <svg
-                    className="w-3 h-3 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-              )}
-            </button>
-          ))}
+                {/* Selected Indicator */}
+                {selectedTemplateId === template.id && (
+                  <div className="absolute -top-2.5 left-3 w-5 h-5 bg-[var(--primary)] rounded-full flex items-center justify-center shadow-sm z-10">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
