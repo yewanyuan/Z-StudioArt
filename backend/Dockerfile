@@ -28,9 +28,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8000/health')" || exit 1
 
 # Run application
-CMD ["gunicorn", "app.main:app", \
-     "--workers", "2", \
-     "--worker-class", "uvicorn.workers.UvicornWorker", \
-     "--bind", "0.0.0.0:${PORT:-8000}", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-"]
+CMD gunicorn app.main:app \
+     --workers 2 \
+     --worker-class uvicorn.workers.UvicornWorker \
+     --bind 0.0.0.0:${PORT:-8000} \
+     --access-logfile - \
+     --error-logfile -
