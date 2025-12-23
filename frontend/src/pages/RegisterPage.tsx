@@ -229,7 +229,8 @@ export function RegisterPage() {
                     <label htmlFor="code" className="form-label">
                       验证码
                     </label>
-                    <div className="flex gap-3">
+                    {/* Stack vertically on mobile, horizontal on desktop */}
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <input
                         id="code"
                         type="text"
@@ -237,13 +238,13 @@ export function RegisterPage() {
                         onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="请输入验证码"
                         disabled={isSubmitting}
-                        className="form-input flex-1"
+                        className="form-input sm:flex-1"
                       />
                       <button
                         type="button"
                         onClick={handleSendCode}
                         disabled={!isValidPhone(phone) || countdown > 0 || isSendingCode}
-                        className="btn-secondary whitespace-nowrap min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-secondary whitespace-nowrap sm:min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSendingCode ? (
                           <span className="flex items-center justify-center gap-2">
