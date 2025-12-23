@@ -884,6 +884,7 @@ ul, ol {
   .create-page-grid {
     grid-template-columns: 480px 1fr;
     gap: 32px;
+    align-items: start;
   }
 }
 
@@ -906,6 +907,8 @@ ul, ol {
 }
 
 .create-main {
+  display: flex;
+  flex-direction: column;
   min-height: auto;
 }
 

@@ -14,18 +14,8 @@ export function ResultGallery({ images, isLoading, aspectRatio, language }: Resu
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const t = TRANSLATIONS[language].gallery;
 
-  const getAspectClass = () => {
-    switch (aspectRatio) {
-      case '1:1':
-        return 'aspect-square';
-      case '9:16':
-        return 'aspect-[9/16]';
-      case '16:9':
-        return 'aspect-video';
-      default:
-        return 'aspect-square';
-    }
-  };
+  // aspectRatio is kept for potential future use but thumbnails now use object-contain
+  void aspectRatio;
 
   const handleDownload = async (image: GeneratedImage, index: number) => {
     try {
@@ -94,16 +84,16 @@ export function ResultGallery({ images, isLoading, aspectRatio, language }: Resu
     );
   }
 
-  // Results grid
+  // Results grid - display thumbnail that fits entirely within the gallery
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
+    <div className="h-full flex flex-col">
       {/* Download All Button */}
       {images.length > 1 && (
-        <div className="flex justify-end">
+        <div className="flex justify-end mb-3">
           <button
             type="button"
             onClick={handleDownloadAll}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white text-xs font-medium rounded-full transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--primary-bg)] hover:bg-[var(--primary)] text-[var(--text-muted)] hover:text-white text-xs font-medium rounded-full transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -118,89 +108,110 @@ export function ResultGallery({ images, isLoading, aspectRatio, language }: Resu
         </div>
       )}
 
-      {/* Image Grid */}
-      <div
-        className={`grid gap-4 ${
-          images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
-        }`}
-      >
-        {images.map((image, index) => (
+      {/* Image Display - centered thumbnail that shows entire image */}
+      <div className="flex-1 flex items-center justify-center">
+        {images.length === 1 ? (
+          // Single image - centered, scaled to fit
           <div
-            key={image.id}
-            className="group relative bg-black/40 rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all hover:border-indigo-500/50 hover:shadow-indigo-500/10"
+            className="group relative bg-[var(--bg-light)] rounded-xl overflow-hidden border border-[var(--border-light)] shadow-lg transition-all hover:border-[var(--primary)] hover:shadow-xl max-h-full"
           >
-            {/* Image */}
-            <div className={getAspectClass()}>
-              <img
-                src={image.thumbnail_url || image.url}
-                alt={`Generated Poster ${index + 1}`}
-                className="w-full h-full object-cover cursor-pointer transition-transform duration-700 group-hover:scale-105"
-                onClick={() => setSelectedIndex(index)}
-              />
-            </div>
+            <img
+              src={images[0].thumbnail_url || images[0].url}
+              alt="Generated Poster 1"
+              className="max-w-full max-h-[420px] w-auto h-auto object-contain cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+              onClick={() => setSelectedIndex(0)}
+            />
 
             {/* Watermark Badge */}
-            {image.has_watermark && (
-              <div className="absolute top-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md border border-white/10 rounded text-[10px] font-medium text-gray-300 uppercase tracking-wider">
+            {images[0].has_watermark && (
+              <div className="absolute top-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded text-[10px] font-medium text-white uppercase tracking-wider">
                 {t.watermark}
               </div>
             )}
 
             {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-4">
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-4">
               <button
                 type="button"
-                onClick={() => setSelectedIndex(index)}
-                className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full transition-all transform hover:scale-110 text-white"
+                onClick={() => setSelectedIndex(0)}
+                className="p-3 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full transition-all transform hover:scale-110 text-white"
                 title="View Fullscreen"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
-                  />
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                 </svg>
               </button>
               <button
                 type="button"
-                onClick={() => handleDownload(image, index)}
-                className="p-3 bg-indigo-600/80 hover:bg-indigo-600 backdrop-blur-md border border-indigo-500/50 rounded-full transition-all transform hover:scale-110 text-white shadow-lg shadow-indigo-500/30"
+                onClick={() => handleDownload(images[0], 0)}
+                className="p-3 bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-full transition-all transform hover:scale-110 text-white shadow-lg"
                 title="Download"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </button>
             </div>
-
-            {/* Image Number */}
-            <div className="absolute bottom-3 right-3 w-6 h-6 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/10">
-              <span className="text-xs text-white font-medium">{index + 1}</span>
-            </div>
           </div>
-        ))}
+        ) : (
+          // Multiple images - grid layout
+          <div className="grid grid-cols-2 gap-4 w-full">
+            {images.map((image, index) => (
+              <div
+                key={image.id}
+                className="group relative bg-[var(--bg-light)] rounded-xl overflow-hidden border border-[var(--border-light)] shadow-lg transition-all hover:border-[var(--primary)] hover:shadow-xl flex items-center justify-center"
+              >
+                <img
+                  src={image.thumbnail_url || image.url}
+                  alt={`Generated Poster ${index + 1}`}
+                  className="max-w-full max-h-[180px] w-auto h-auto object-contain cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+                  onClick={() => setSelectedIndex(index)}
+                />
+
+                {/* Watermark Badge */}
+                {image.has_watermark && (
+                  <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 backdrop-blur-md rounded text-[10px] font-medium text-white uppercase tracking-wider">
+                    {t.watermark}
+                  </div>
+                )}
+
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIndex(index)}
+                    className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full transition-all transform hover:scale-110 text-white"
+                    title="View Fullscreen"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(image, index)}
+                    className="p-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] rounded-full transition-all transform hover:scale-110 text-white shadow-lg"
+                    title="Download"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Image Number */}
+                <div className="absolute bottom-2 right-2 w-5 h-5 bg-black/60 backdrop-blur rounded-full flex items-center justify-center">
+                  <span className="text-xs text-white font-medium">{index + 1}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Dimensions Info */}
       {images.length > 0 && (
-        <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest">
+        <p className="text-[10px] text-[var(--text-muted)] text-center mt-3 uppercase tracking-widest">
           {t.dimensions}: {images[0].width} × {images[0].height} px
         </p>
       )}

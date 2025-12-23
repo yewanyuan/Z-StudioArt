@@ -174,9 +174,9 @@ export function PosterGeneratorPage() {
 
           {/* Two Column Layout */}
           <div className="create-page-grid">
-            {/* Left Sidebar - Controls */}
+            {/* Left Column */}
             <div className="create-sidebar">
-              {/* Scene & Marketing Inputs */}
+              {/* Scene & Marketing Inputs (Create Poster) */}
               <div className="compact-card">
                 <div className="create-section-header">
                   <h4>{t.form.title}</h4>
@@ -201,23 +201,7 @@ export function PosterGeneratorPage() {
                 </div>
               </div>
 
-              {/* Aspect Ratio */}
-              <div className="compact-card">
-                <div className="create-section-header">
-                  <h4>{language === 'zh' ? '输出设置' : 'Output Settings'}</h4>
-                </div>
-                <AspectRatioSelector
-                  value={aspectRatio}
-                  onChange={setAspectRatio}
-                  customWidth={customWidth}
-                  customHeight={customHeight}
-                  onCustomChange={handleCustomDimensionsChange}
-                  language={language}
-                  disabled={isGenerating}
-                />
-              </div>
-
-              {/* Template Selector */}
+              {/* Style Templates - moved below Create Poster */}
               <div className="compact-card">
                 <div className="create-section-header">
                   <h4>{language === 'zh' ? '风格模板' : 'Style Templates'}</h4>
@@ -241,10 +225,10 @@ export function PosterGeneratorPage() {
               )}
             </div>
 
-            {/* Right Main Area - Results */}
+            {/* Right Column */}
             <div className="create-main flex flex-col gap-6">
-              {/* Results Area */}
-              <div className="compact-card flex-1 flex flex-col min-h-[420px] sm:min-h-[420px]">
+              {/* Gallery Area - Fixed height, images shown as thumbnails */}
+              <div className="compact-card flex flex-col" style={{ height: '580px' }}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <div className="create-section-header mb-0 pb-0 border-b-0">
                     <h4>{t.gallery.title}</h4>
@@ -291,7 +275,7 @@ export function PosterGeneratorPage() {
                   )}
                 </div>
 
-                <div className="flex-1">
+                <div className="flex-1 overflow-hidden">
                   <ResultGallery
                     images={generatedImages}
                     isLoading={isGenerating}
@@ -301,15 +285,32 @@ export function PosterGeneratorPage() {
                 </div>
               </div>
 
-              {/* Bottom Action Bar - Generate Button & Quick Links */}
-              <div className="compact-card">
-                <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+              {/* Bottom Row: Output Settings + Generate Button & Quick Links */}
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Output Settings - separate card */}
+                <div className="compact-card flex-1">
+                  <div className="create-section-header">
+                    <h4>{language === 'zh' ? '输出设置' : 'Output Settings'}</h4>
+                  </div>
+                  <AspectRatioSelector
+                    value={aspectRatio}
+                    onChange={setAspectRatio}
+                    customWidth={customWidth}
+                    customHeight={customHeight}
+                    onCustomChange={handleCustomDimensionsChange}
+                    language={language}
+                    disabled={isGenerating}
+                  />
+                </div>
+
+                {/* Generate Button & Quick Links - separate card on the right */}
+                <div className="compact-card lg:w-[200px] flex flex-col justify-between">
                   {/* Generate Button */}
                   <button
                     type="button"
                     onClick={handleGenerate}
                     disabled={!canGenerate || isGenerating}
-                    className="generate-btn flex-1 lg:flex-none lg:min-w-[200px]"
+                    className="generate-btn w-full"
                   >
                     {isGenerating ? (
                       <>
@@ -326,24 +327,21 @@ export function PosterGeneratorPage() {
                     )}
                   </button>
 
-                  {/* Divider */}
-                  <div className="hidden lg:block w-px h-10 bg-[var(--border-light)]" />
-
                   {/* Quick Links */}
-                  <div className="flex items-center gap-3 flex-1">
-                    <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
-                      {language === 'zh' ? '其他工具' : 'Other Tools'}:
+                  <div className="flex flex-col gap-2 mt-4">
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {language === 'zh' ? '其他工具' : 'Other Tools'}
                     </span>
                     <Link
                       to="/scene-fusion"
-                      className="flex items-center gap-2 px-4 py-2.5 bg-[var(--primary-bg)] rounded-lg text-sm font-medium text-[var(--text-dark)] hover:bg-[var(--primary)] hover:text-white transition-all"
+                      className="flex items-center gap-2 px-3 py-2 bg-[var(--primary-bg)] rounded-lg text-sm font-medium text-[var(--text-dark)] hover:bg-[var(--primary)] hover:text-white transition-all"
                     >
                       <span>🖼️</span>
                       <span>{language === 'zh' ? '场景融合' : 'Scene Fusion'}</span>
                     </Link>
                     <Link
                       to="/gallery"
-                      className="flex items-center gap-2 px-4 py-2.5 bg-[var(--primary-bg)] rounded-lg text-sm font-medium text-[var(--text-dark)] hover:bg-[var(--primary)] hover:text-white transition-all"
+                      className="flex items-center gap-2 px-3 py-2 bg-[var(--primary-bg)] rounded-lg text-sm font-medium text-[var(--text-dark)] hover:bg-[var(--primary)] hover:text-white transition-all"
                     >
                       <span>📁</span>
                       <span>{language === 'zh' ? '我的作品' : 'My Works'}</span>
