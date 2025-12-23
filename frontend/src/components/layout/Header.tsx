@@ -103,23 +103,25 @@ export function Header() {
           {/* Right Actions - Language Switch & User */}
           <div className="flex items-center gap-3 ml-auto">
             {/* Language Switch - desktop only */}
-            <div className="language-switch hidden sm:flex">
-              <button
-                type="button"
-                onClick={() => setLanguage('zh')}
-                className={`lang-btn ${language === 'zh' ? 'active' : ''}`}
-                aria-pressed={language === 'zh'}
-              >
-                中文
-              </button>
-              <button
-                type="button"
-                onClick={() => setLanguage('en')}
-                className={`lang-btn ${language === 'en' ? 'active' : ''}`}
-                aria-pressed={language === 'en'}
-              >
-                EN
-              </button>
+            <div className="hidden sm:block">
+              <div className="language-switch">
+                <button
+                  type="button"
+                  onClick={() => setLanguage('zh')}
+                  className={`lang-btn ${language === 'zh' ? 'active' : ''}`}
+                  aria-pressed={language === 'zh'}
+                >
+                  中文
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  className={`lang-btn ${language === 'en' ? 'active' : ''}`}
+                  aria-pressed={language === 'en'}
+                >
+                  EN
+                </button>
+              </div>
             </div>
 
             {isAuthenticated ? (
